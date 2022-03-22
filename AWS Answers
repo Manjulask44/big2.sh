@@ -1,0 +1,1359 @@
+1)I have an application, how you will setup a VPC? What all the components you use ?
+Configure a VPC with private subnets and a NAT gateway
+If you use AWS Directory Service to create an AWS Managed Microsoft or a Simple AD, we recommend that you configure the VPC with one public subnet and two private subnets. Configure your directory to launch your WorkSpaces in the private subnets. To provide internet access to WorkSpaces in a private subnet, configure a NAT gateway in the public subnet.
+ 
+Prerequisites
+If you aren't already familiar with working with VPCs and subnets, we recommend reading VPC and Subnet Sizing for IPv4 in the Amazon VPC User Guide before performing the following tasks.
+Tasks
+Step 1: Allocate an Elastic IP address
+Step 2: Create a VPC
+Step 3: Add a second private subnet
+Step 4: Verify and name the route tables
+Step 5: Route your WorkSpaces to the subnets
+Note
+As an alternative to the following procedure for configuring a VPC with private subnets and a NAT gateway, you can follow the steps in the "Getting started project" tutorial, which details how to set up your VPC and your WorkSpaces directory. That tutorial also covers how to launch WorkSpaces, create custom images and bundles, and perform other tasks related to administering your WorkSpaces.
+Step 1: Allocate an Elastic IP address
+Allocate an Elastic IP address for your NAT gateway as follows. Note that if you are using an alternative method of providing internet access, you can skip this step.
+To allocate an Elastic IP address
+Open the Amazon VPC console at https://console.aws.amazon.com/vpc/.
+In the navigation pane, choose Elastic IPs.
+Choose Allocate Elastic IP address.
+On the Allocate Elastic IP address page, for Public iPv4 address pool, choose Amazon's pool of IPv4 addresses, Public IPv4 address that you bring to your AWS account, or Customer owned pool of IPv4 addresses, and then choose Allocate.
+Make a note of the Elastic IP address, then choose Close.
+Step 2: Create a VPC
+Create a VPC with one public subnet and two private subnets as follows.
+To create the VPC
+Open the Amazon VPC console at https://console.aws.amazon.com/vpc/.
+In the navigation pane, choose VPC Dashboard in the upper-left corner.
+Choose Launch VPC Wizard.
+Choose VPC with Public and Private Subnets and then choose Select.
+Configure the VPC as follows:
+For IPv4 CIDR block, enter the CIDR block for the VPC. We recommend that you use a CIDR block from the private (non-publicly routable) IP address ranges specified in RFC 1918. For example, 10.0.0.0/16. For more information, see VPC and Subnet Sizing for IPv4 in the Amazon VPC User Guide.
+For IPv6 CIDR Block, keep No IPv6 CIDR Block.
+For VPC name, enter a name for the VPC.
+Configure the public subnet as follows:
+For IPv4 CIDR block, enter the CIDR block for the subnet. For example, 10.0.0.0/24. For more information, see VPC and Subnet Sizing for IPv4 in the Amazon VPC User Guide.
+For Availability Zone, keep No Preference.
+For Public subnet name, enter a name for the subnet (for example, WorkSpaces Public Subnet).
+Configure the first private subnet as follows:
+For Private subnet's IPv4 CIDR, enter the CIDR block for the subnet. For example, 10.0.1.0/24.
+To make an appropriate selection for Availability Zone, see Availability Zones for Amazon WorkSpaces.
+For Private subnet name, enter a name for the subnet (for example, WorkSpaces Private Subnet 1).
+For Elastic IP Allocation ID, choose the Elastic IP address that you created. Note that if you are using an alternative method of providing internet access, you can skip this step.
+For Service endpoints, do nothing.
+For Enable DNS hostnames, keep Yes.
+For Hardware tenancy, keep Default.
+Choose Create VPC. Note that it takes several minutes to set up your VPC. After the VPC is created, choose OK.
+
+Note:
+You can associate an IPv6 CIDR block with your VPC and subnets. However, if you configure your subnets to automatically assign IPv6 addresses to instances launched in the subnet, then you cannot use Graphics bundles. (You can use GraphicsPro bundles, however.) This restriction arises from a hardware limitation of previous-generation instance types that do not support IPv6.
+To work around this issue, you can temporarily disable the auto-assign IPv6 addresses setting on the WorkSpaces subnets before launching Graphics bundles, and then reenable this setting (if needed) after launching Graphics bundles so that any other bundles receive the desired IP addresses.
+By default, the auto-assign IPv6 addresses setting is disabled. To check this setting from the Amazon VPC console, in the navigation pane, choose Subnets. Select the subnet, and choose Actions, Modify auto-assign IP settings.
+For more information about working with IPv6 addresses, see IP Addressing in Your VPC in the Amazon VPC User Guide.
+Step 3: Add a second private subnet
+In the previous step, you created a VPC with one public subnet and one private subnet. Use the following procedure to add a second private subnet.
+To add a private subnet
+In the navigation pane, choose Subnets.
+Choose Create Subnet.
+For Name tag, enter a name for the private subnet (for example, WorkSpaces Private Subnet 2).
+For VPC, select the VPC that you created.
+To make an appropriate selection for Availability Zone, see Availability Zones for Amazon WorkSpaces. Make sure you select a different Availability Zone from the one you selected for Step 7 earlier.
+For IPv4 CIDR block, enter the CIDR block for the subnet. For example, 10.0.2.0/24.
+Choose Create and Close.
+Step 4: Verify and name the route tables
+You can verify and name the route tables for each subnet.
+To verify and name the route tables
+In the navigation pane, choose Subnets, and select the public subnet that you created.
+On the Route Table tab, choose the ID of the route table (for example, rtb-12345678).
+Select the route table. Under Name, choose the edit icon (the pencil), and enter a name (for example, workspaces-public-routetable), and then choose the check mark to save the name.
+On the Routes tab, verify that there is one route for local traffic and another route that sends all other traffic to the internet gateway for the VPC. For example, you should see entries similar to those in the following table.
+Destination	Target
+10.0.0.0/16	local
+0.0.0.0/0	igw-12345678
+In the navigation pane, choose Subnets, and select the first private subnet that you created (for example, WorkSpaces Private Subnet 1).
+On the Route Table tab, choose the ID of the route table.
+Select the route table. Under Name, choose the edit icon (the pencil), and enter a name (for example, workspaces-private-routetable), and then choose the check mark to save the name.
+On the Routes tab, verify that there is one route for local traffic and another route that sends all other traffic to the NAT gateway. For example, you should see entries similar to those in the following table.
+Destination	Target
+10.0.0.0/16	local
+0.0.0.0/0	nat-12345678
+Note
+To provide internet access to your WorkSpaces in the private subnets, make sure your NAT gateway is configured in the public subnet.
+In the navigation pane, choose Subnets, and select the second private subnet that you created (for example, WorkSpaces Private Subnet 2). On the Route Table tab, verify that the route table is the private route table (for example, workspaces-private-routetable). If the route table is different, choose Edit and select this route table.
+Step 5: Route your WorkSpaces to the subnets
+To route your WorkSpaces to your VPC's subnets, make sure to select your VPC and subnets during the process of setting up your WorkSpaces directory.
+To set up your WorkSpaces directory, see Launch a virtual desktop using WorkSpaces, and select the tutorial for the type of directory you'd like to use (AWS Managed Microsoft AD, Simple AD, AD Connector, or a trust relationship between your AWS Managed Microsoft AD directory and your on-premises domain).
+Configure a VPC with public subnets
+If you prefer, you can create a VPC with two public subnets. To provide internet access to WorkSpaces in public subnets, configure the directory to assign Elastic IP addresses automatically or manually assign an Elastic IP address to each WorkSpace.
+Prerequisites
+If you aren't already familiar with working with VPCs and subnets, we recommend reading VPC and Subnet Sizing for IPv4 in the Amazon VPC User Guide before performing the following tasks.
+Tasks
+Step 1: Create a VPC
+Step 2: Add a second public subnet
+Step 3: Assign the Elastic IP address
+Step 4: Route your WorkSpaces to the subnets
+Step 1: Create a VPC
+Create a VPC with one public subnet as follows.
+To create the VPC
+Open the Amazon VPC console at https://console.aws.amazon.com/vpc/.
+In the navigation pane, choose VPC Dashboard in the upper-left corner.
+Choose Launch VPC Wizard.
+Choose VPC with a Single Public Subnet and then choose Select.
+For IPv4 CIDR block, enter the CIDR block for the VPC. We recommend that you use a CIDR block from the private (non-publicly routable) IP address ranges specified in RFC 1918. For example, 10.0.0.0/16. For more information, see VPC and Subnet Sizing for IPv4 in the Amazon VPC User Guide.
+For IPv6 CIDR block, keep No IPv6 CIDR Block.
+For VPC name, enter a name for the VPC.
+For Public subnet's IPv4 CIDR, enter the CIDR block for the subnet. For example, 10.0.0.0/24. For more information, see VPC and Subnet Sizing for IPv4 in the Amazon VPC User Guide.
+To make an appropriate selection for Availability Zone, see Availability Zones for Amazon WorkSpaces.
+(Optional) For Subnet name, enter a name for the subnet.
+For Service endpoints, do nothing.
+For Enable DNS hostnames, keep Yes.
+For Hardware tenancy, keep Default.
+Choose Create VPC. After the VPC is created, choose OK.
+Step 2: Add a second public subnet
+In the previous step, you created a VPC with one public subnet. Use the following procedure to add a second public subnet and associate it with the route table for the first public subnet, which has a route to the internet gateway for the VPC.
+To add a public subnet
+In the navigation pane, choose Subnets.
+Choose Create Subnet.
+For Name tag, enter a name for the subnet.
+For VPC, select the VPC that you created.
+To make an appropriate selection for Availability Zone, see Availability Zones for Amazon WorkSpaces. Make sure you select a different Availability Zone from the one you selected for Step 9 earlier.
+For IPv4 CIDR block, enter the CIDR block for the subnet. For example, 10.0.1.0/24.
+Choose Create. After the subnet is created, choose Close.
+Associate the new public subnet with the route table created for the first subnet as follows:
+In the navigation pane, choose Subnets.
+Select the first subnet.
+On the Route Table tab, choose the ID of the route table.
+On the Subnet Associations tab, choose Edit subnet associations.
+Select the check box for the second subnet (the public subnet you just created) and choose Save.
+Step 3: Assign the Elastic IP address
+You can assign Elastic IP addresses (static public IP addresses) to your WorkSpaces automatically or manually. To use automatic assignment, see Configure automatic IP addresses. To assign Elastic IP addresses manually, use the following procedure.
+To assign an Elastic IP address to a WorkSpace manually
+For a video tutorial about how to assign an Elastic IP address to a WorkSpace, see the AWS Knowledge Center video How do I associate an Elastic IP Address with a WorkSpace?.
+Open the WorkSpaces console at https://console.aws.amazon.com/workspaces/.
+In the navigation pane, choose WorkSpaces.
+Expand the row (choose the arrow icon) for the WorkSpace and note the value of WorkSpace IP. This is the primary private IP address of the WorkSpace.
+Open the Amazon EC2 console at https://console.aws.amazon.com/ec2/.
+In the navigation pane, choose Elastic IPs. If you do not have an available Elastic IP address, choose Allocate Elastic IP address and choose Amazon's pool of IPv4 addresses or Customer owned pool of IPv4 addresses, and then choose Allocate. Make note of the new IP address.
+In the navigation pane, choose Network Interfaces.
+Select the network interface for your WorkSpace. To find the network interface for your WorkSpace, enter the WorkSpace IP value (which you noted earlier in Step 3) in the search box, and then press Enter. The WorkSpace IP value matches the value in the network interface's Primary private IPv4 IP column. Note that the network interface's VPC ID value matches the ID of your WorkSpaces VPC.
+Choose Actions, Manage IP Addresses. Choose Assign new IP, and then choose Yes, Update. Make note of the new IP address.
+Choose Actions, Associate Address.
+On the Associate Elastic IP Address page, choose an Elastic IP address from Address. For Associate to private IP address, specify the new private IP address, and then choose Associate Address.
+Step 4: Route your WorkSpaces to the subnets
+To route your WorkSpaces to your VPC's subnets, make sure to select your VPC and subnets during the process of setting up your WorkSpaces directory.
+To set up your WorkSpaces directory, see Launch a virtual desktop using WorkSpaces, and select the tutorial for the type of directory you'd like to use (AWS Managed Microsoft AD, Simple AD, AD Connector, or a trust relationship between your AWS Managed Microsoft AD directory and your on-premises domain).
+
+* Where you will set the Route Table?
+When you create a VPC, it automatically has a main route table. When a subnet does not have an explicit routing table associated with it, the main routing table is used by default. On the Route Tables page in the Amazon VPC console, you can view the main route table for a VPC by looking for yes in the Main column
+* Services used in AWS ?
+Amazon EC2
+ Amazon RDS....
+Amazon Simple Storage Service (S3) ...
+Amazon CloudFront
+Amazon VPC. ...
+Amazon SNS. ...
+AWS Beanstalk.
+AWS Lambda.
+AWS ECS – Elastic Container Service. ...
+AWS EKS – Elastic Kubernetes Service. ...
+AWS SQS – Simple Queue Service. ...
+AWS DynamoDB – NoSQL Database Services
+AWS Autoscaling
+AWS IAM
+
+* How can you make any S3 bucket as private?
+By default, all S3 buckets are private and can be accessed only by users who are explicitly granted access. Restrict access to your S3 buckets or objects by doing the following: Writing IAM user policies that specify the users that can access specific buckets and objects
+
+Steps to create Private AWS S3 bucket:
+Go to S3 section in your AWS Console.
+Click on the Create bucket icon.
+Enter the name of the S3 bucket.
+Click on the AWS Region select list.
+Select the region for the S3 bucket.
+Accept defaults (Block all public access) on the public access section.
+Configure other options for the S3 bucket as necessary.
+Click on the Create bucket button.
+
+* Cross region replication? How you apply it? Will it copy automatically?
+With cross-region replication, every object uploaded to an S3 bucket is automatically replicated to a destination bucket in a different AWS region that you choose. For example, you can use cross-region replication to provide lower-latency data access in different geographic regions.
+
+Which AWS services support cross region replication?
+The Guidance provisions the necessary AWS services to monitor and view replication status, including AWS Lambda, Amazon CloudWatch, Amazon Simple Notification Service (Amazon SNS), AWS CloudTrail, Amazon Simple Queue Service (Amazon SQS), and Amazon DynamoDB
+
+* S3 transfer acceleration?
+Amazon S3 Transfer Acceleration is a bucket-level feature that enables fast, easy, and secure transfers of files over long distances between your client and an S3 bucket. Transfer Acceleration takes advantage of the globally distributed edge locations in Amazon Cloud Front.
+* Read replica
+A read replica is a copy of the primary instance that reflects changes to the primary in almost real time, in normal circumstances. You can use a read replica to offload read requests or analytics traffic from the primary instance. Additionally, for disaster recovery, you can perform a regional migration.
+(9)* suppose you create Auto scaling group and in launch conf you specify as 3 instances, then the all the 3 instances are running in full capacity  will the application fails or it will be running? Do you think AWS will provide new instance?
+You can specify the minimum number of instances in each Auto Scaling group, and Amazon EC2 Auto Scaling ensures that your group never goes below this size. You can specify the maximum number of instances in each Auto Scaling group, and Amazon EC2 Auto Scaling ensures that your group never goes above this size. If you specify the desired capacity, either when you create the group or at any time thereafter, Amazon EC2 Auto Scaling ensures that your group has this many instances. If you specify scaling policies, then Amazon EC2 Auto Scaling can launch or terminate instances as demand on your application increases or decreases.
+
+10* How to you manage credentials?11* If credentials icon is not available? What you will do?
+  12 * you are working on EC2 and that goes down and how do you resolve this?
+13* you want to give a access to a EC2 and you have only pvt key and how do you enable him to access the EC2?
+
+14* EKS?
+EKS stands for Elastic Kubernetes Service, which is an Amazon offering that helps in running the Kubernetes on AWS without requiring the user to maintain their own Kubernetes control plane. It is a fully managed service by Amazon.
+
+* VPC? Suppose I have a server, need to download the packages from the internet, but sever should not be accessed directly from outside? How you can do that.
+A virtual private cloud (VPC) is a secure, isolated private cloud hosted within a public cloud. VPC customers can run code, store data, host websites, and do anything else they could do in an ordinary private cloud, but the private cloud is hosted remotely by a public cloud provider.
+
+* 2 AWS accounts, my EC2 of 1 account should talk to my another EC2? How?
+
+17* IAM? I have 10 instances, how do you give access to user for only 5 resources?
+AWS Identity and Access Management (IAM) provides fine-grained access control across all of AWS. With IAM, you can specify who can access which services and resources, and under which conditions. With IAM policies, you manage permissions to your workforce and systems to ensure least-privilege permissions.
+
+Open the Amazon EC2 console, and then add tags to the group of EC2 instances that you want the users or groups to be able to access. If you don't already have a tag, create a new tag.
+
+We can use the AWS Security Token Service (AWS STS) to create and provide trusted users with temporary security credentials that can control access to your AWS resources.
+
+
+18* Cross region Route53 ?
+With Amazon Route 53s new Latency Based Routing (LBR) feature, you can now have instances in several AWS regions and have requests from your end-users automatically routed to the region with the lowest latency.
+
+  19 * Health checks in Route53
+Amazon Route 53 health checks monitor the health and performance of your web applications, web servers, and other resources. Each health check that you create can monitor one of the following: The health of a specified resource, such as a web server. The status of other health checks.
+
+  20 * DualStack configuration in Route53?
+Dual stack means that devices are able to run IPv4 and IPv6 in parallel. It allows hosts to simultaneously reach IPv4 and IPv6 content, so it offers a very flexible coexistence strategy. Benefits. • Native dual stack does not require any tunneling. mechanisms on internal networks.
+
+  21 * what is S3 and why customer choose S3 ?
+Amazon Simple Storage Service (Amazon S3) is an object storage service that offers industry-leading scalability, data availability, security, and performance. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere.
+
+  22 * When the jar is created, how will you push it to S3?
+
+  23 * dynamoDB
+Amazon DynamoDB is a fully managed, serverless, key-value NoSQL database designed to run high-performance applications at any scale. DynamoDB offers built-in security, continuous backups, automated multi-region replication, in-memory caching, and data export tools.
+
+  25 * why we need ELB & how you select which type of loadbalancer suitable for my application.
+Elastic Load Balancing (ELB) is a load-balancing service for Amazon Web Services (AWS) deployments. ELB automatically distributes incoming application traffic and scales resources to meet traffic demands. ELB helps an IT team adjust capacity according to incoming application and network traffic. The load balancer also monitors the health of its registered targets and ensures that it routes traffic only to healthy targets.
+
+28 * How many AWS accounts you have managed?
+ Yes, I have used many accounts according to the company requirement, exact number I don’t remember 
+Or Used single account created many accounts using IAM service and maintained it.
+
+
+24 * vpc architecture
+It builds a virtual private network (VPC) environment with public and private subnets where you can launch AWS services and other resources
+Kindly refer the below image>>
+ 
+36 * if you create a transit gateway what exactly you will define in attachments?
+Don’t know
+
+26 * cross-zone Loadbalancer 
+                                                      The cross-zone load balancing distributes the load equally across all registered instances in all registered AZs.
+
+ 
+
+27 * cloudwatch & cloudtrail
+CloudWatch focuses on the activity of AWS services and resources, reporting on their health and performance.
+
+CloudTrail is a log of all actions that have taken place inside your AWS environment.
+The auditing tool records all AWS account activity.
+
+CloudWatch is a monitoring service for AWS resources and applications. CloudTrail is a web service that records API activity in your AWS account. They are both useful monitoring tools in AWS.
+CloudWatch offers free basic monitoring for your resources by default, such as EC2 instances, EBS volumes, and RDS DB instances. CloudTrail is also enabled by default when you create your AWS account.
+With CloudWatch, you can collect and track metrics, collect and monitor log files, and set alarms. On the other hand, CloudTrail logs information on who made a request, the services used, the actions performed, parameters for the actions, and the response elements returned by the AWS service. CloudTrail Logs are then stored in an S3 bucket or a CloudWatch Logs log group that you specify.
+
+30 * client has different data centers in different locations. if your client has 50 AWS accounts now there is a requirement to establish connectivity so that the application which is hosted in data centers servers can easily communicate with applications (or) resources that are hosted on different vpc and diff AWS accounts so how you are going to establish the connection?
+Don’t know
+
+31 * customer has 50 (or) 100 odd AWS accounts they are looking for a solution so that every single PC can communicate with each other how you are going to establish that connectivity?
+Don’t know
+
+32 * customer has a physical side production environment (or) workloads are running on AWS there is 1 particular Ip/CIDR which is continuously hitting their environment multiple times in a day they are suspecting that a malicious activity they are asking you to block any kind of traffic from an Ip/CIDR how you will go to block them?
+Don’t know
+
+33 * CIDR for 15 ec2 instances, 2 subnets 1 private and 1 public, write CIDR ranges
+10.0.0.0/16-----VPC
+Pub Subnet 1                                                   Pvt subnet 1
+=2^32-16=2^16=65536
+=2^32-25=2^7=128
+10.0.0.0/25—10.0.0.127                      10.0.0.128/25—10.0.0.255
+
+34 * you have created one server in a private subnet now you have given the Ip address to me. I am the person who will install some software (or) configurations on that server. I am sitting in front of my laptop I am complaining to you that I am not able to access the machine from my laptop how you can resolve it?
+I will check the Boston host connection and security group connection
+
+35 * how you can access a machine without a .pem key?
+HOW TO ACCESS EC2 INSTANCE EVEN IF PEM FILE IS LOST
+Accessing the EC2 instance even if you lose the pem file is rather easy.
+First, create a new instance by creating a new access file, calling it a 'helper' instance with the same region and VPC as the lost pem file instance.
+Now stop the lost pem file instance. Remember not to terminate an instance but to stop it.
+Go to EBS volumes, select the root volume of the lost pem file instance and detach.
+Now again select the detached volume and this time you have to attach this volume to the helper instance that we created before. Since the helper instance already has a root volume by default as /dev/sda1, the newly attached volume will be secondary(eg: /dev/SDF).
+Log in to your helper instance with its per file.
+Execute the below commands:
+# mount /dev/xvdf1 /mnt
+# cp /root/.ssh/authorized_keys /mnt/root/.ssh/
+# umount /mnt
+Detach the secondary volume from the helper instance.
+Again attach the volume back to our recovery instance. Start the instance. Terminate the helper instance.
+Use helper instance pem file to log into recovery instance.
+
+37 * how are you sharing the key for a group of 4 members & these 4 members will be logged in from the same username after 4/5 days customer complaining that a file was deleted how can you trackback who did what?
+Using cloud trail.
+
+38 * what instances you are using in your project? why particular those instances?
+In the interview, if they ask which type is used – c5.2xlarge 8 cores of CPU and 16 GiBs of RAM and c5.2xlarge 16 cores of CPU and 32 GiBs of RAM. This configuration is enough.
+
+39 * customer is asking you to change the instances family to 2 ec2 instances which are part of the autoscaling groups sitting on a load balancer & the condition is they are not looking for new instances and none of the instances to be deleted how you’re going to change the instance family of these 2 instances?
+Don’t know
+
+40 * what kind of individual contribution load that you have played in your experience on AWS? what kind of issues you have resolved? what kind of troubleshooting you have performed?
+Don’t know
+
+41 * pre-signed URL in s3?
+A user who does not have AWS credentials or permission to access an S3 object can be granted temporary access by using a pre-signed URL. A signed URL is generated by an AWS user who has access to the object. The generated URL is then given to the unauthorized user.
+We can also set the time limit for the user, what is going to access ex: 30sec or 1 min
+
+42 * different routing policies in AWS? which policy you have used for your project? 
+There are 925 default policies given by AWS, I have used S3 full access where I have created assume the role to access the bucket in S3 service, and also set up the time limit for 60min.
+
+43 * diff b/w name and alias?
+The CNAME record maps a name to another name. It should only be used when there are no other records on that name. The ALIAS record maps a name to another name but can coexist with other records on that name.
+
+44 * what record is used for DNS to IP?
+The most common DNS record types are: Address Mapping record (A Record)—also known as a DNS host record, stores a hostname and its corresponding IPv4 address. IP Version 6 Address record (AAAA Record)—stores a hostname and its corresponding IPv6 address
+
+45 * any experience with lambda? any experience in writing lambda functions?
+Should check in google
+
+46 * what is an API gateway why do we need it?
+Amazon API Gateway is an AWS service for creating, publishing, maintaining, monitoring, and securing REST, HTTP, and WebSocket APIs at any scale. API developers can create APIs that access AWS or other web services, as well as data stored in the AWS Cloud.
+
+ 47 * How you bind a role to account ( script explain)
+Should check in google.
+
+48 * how do you configure autoscaling and cloud load balancer?
+https://www.youtube.com/watch?v=4EOaAkY4pNE
+
+49 * Where your application is running EC2 or EKS?
+EKS
+50 * Why does your team go manual instead of using EKS?
+I don’t know, go and ask my team (😂)
+
+  51 * Security group ,nacl
+ Security groups acts as a firewall that contains the traffic for one or more instances. You can associate one or more security groups to your instances when you launch them. You can add rules to each security group that allow traffic to and from its associated instances. You can modify the rules of a security group at any time, the new rules are automatically and immediately applied to all the instances that are associated with the security group.
+
+ NACL refers to Network Access Control List, which helps provide a layer of security to the Amazon Web Services stack.  
+NACL helps in providing a firewall thereby helping secure the VPCs and subnets. It helps provide a security layer which controls and efficiently manages the traffic that moves around in the subnets. It is an optional layer for VPC, which adds another security layer to the Amazon service. The differences between NACL and security groups have been discussed below:
+                NACL	Security Group
+Network Access Control List that helps provide a layer of security to the amazon web services. There are two kinds of NACL- Customized and default.	A security group has to be explicitly assigned to an instance; it doesn’t associate itself to a subnet.
+Multiple subnets can be bound with a single NACL, but one subnet can be bound with a single NACL only, at a time	Security groups are associated with an instance of a service. It can be associated with one or more security groups which has been created by the user.
+NACL can be understood as the firewall or protection for the subnet.	Security group can be understood as a firewall to protect EC2 instances.
+These are stateless, meaning any change applied to an incoming rule isn’t automatically applied to an outgoing rule.	These are stateful, which means any changes which are applied to an incoming rule is automatically applied to a rule which is outgoing.
+Example: If a request comes through port 80, it should be explicitly indicated that its outgoing response would be the same port 80.	Example: If the incoming port of a request is 80, the outgoing response of that request is also 80 (it is opened automatically) by default.
+NACL can be used to support as well as deny rules. Denial of rules can be explicitly mentioned, so that when the layer sees a specific IP address, it blocks connecting to it.	They support rules only, and the default behaviour is denial of all rules.  
+
+Every VPC can belong to different security groups.
+It is considered to be the second layer of defence, which helps protect AWS stack. It is an optional layer for VPC, which adds another security layer to the amazon service.	It is considered to be the first defence layer that helps protect the Amazon Web Services infrastructure.
+In case of NACL, the rules are applied in the order of their priority, wherein priority is indicated by the number the rule is assigned.	In case of a security group, all the rules are applied to an instance.
+This means every rule is evaluated based on the priority it has.	This means all rules are evaluated before they allow a traffic.
+
+  52 * Ecs
+Amazon Elastic Container Service
+AMAZON EC2 CONTAINER SERVICE (ECS)
+• Amazon EC2 Container Service (Amazon ECS) is a highly scalable, fast, container management service that makes it easy to run, stop, and manage Docker containers on a cluster of Amazon EC2 instances.
+• Amazon ECS uses Docker images in task definitions to launch containers on EC2 instances in our clusters.
+• Docker is a technology that allows us to build, run, test, and deploy distributed applications that are based on Linux containers.
+ECS is basically a set of APIs that turn EC2 instances into compute cluster for container management:
+1. EC2 instances must call RegisterContainerInstance API to signal that they are ready to run containers.
+2. Need to call RegisterTaskDefinition API to define the tasks (setting an image, command and memory for docker run etc.)
+3. We use RunTask API to start a new task.
+4. Lastly, we make a CreateService API call to run a long-running container.
+• We can start using Amazon EC2 Container Service (Amazon ECS) by creating a task definition, scheduling tasks, and configuring a cluster in the Amazon ECS console. Note that we do not need any orchestration tools such as Mesos, Kubernetes or Docker Swarm.
+
+ 53 * Ec2 s3 iam roles
+ EC2, a Virtual Machine in the cloud on which you have OS-level control.
+You can run this cloud server whenever you want and can be used when you
+need to deploy your own servers in the cloud, similar to your on-premises
+servers, and when you want to have full control over the choice of hardware
+and the updates on the machine.
+ 
+S3 stands for simple storage service, it is used for storing data in the form of objects in the AWS Cloud.
+Amazon Simple Storage Service (S3) is a storage for the internet.
+It is designed for large-capacity, low-cost storage provision across multiple geographical regions.
+Amazon S3 provides developers and IT teams with Secure, Durable and Highly Scalable object storage.
+S3 is a safe place to store the files.
+It is Object-based storage, i.e., you can store the images, word files, pdf files, etc. The files which are stored in S3 can be from 0 Bytes to 5 TB.
+It has unlimited storage means that you can store the data as much you want.
+Files are stored in Bucket. A bucket is like a folder available in S3 that stores the files.
+S3 is a universal namespace, i.e., the names must be unique globally. Bucket contains a DNS address. Therefore, the bucket must contain a unique name to generate a unique DNS address.
+ 
+I am Roles
+Roles are for AWS services, Where we can assign permission of some AWS service to other Service.
+Example – Giving S3 permission to EC2 to access S3 Bucket Contents.
+Policies are for users and groups, Where we can assign permission to user’s and groups.
+Example – Giving permission to user to access the S3 Buckets.
+
+  54 * Lambda
+AWS Lambda is used to execute backend code without worrying about the underlying architecture, you just upload the code and it runs, it’s that simple!
+AWS Lambda is a compute service offered by Amazon.
+What is AWS Lambda?
+•  Amazon explains, AWS Lambda (λ) as a ‘serverless’ compute service, meaning the developers, don’t have to worry about which AWS resources to launch, or how will they manage them, they just put the code on lambda and it runs, it’s that simple! It helps you to focus on core-competency i.e. App Building or the code.
+
+55 * aws instances
+Therefore, AWS EC2 offers 5 types of instances which are as follows:
+General Instances :For applications that require a balance of performance and cost. ▪ E.g email responding systems, where you need a prompt response as well as the it should be cost effective, since it doesn’t require much processing.
+Compute Instances :For applications that require a lot of processing from the CPU.
+E.g analysis of data from a stream of data, like Twitter stream
+Memory Instances : For applications that are heavy in nature, therefore, require a lot of RAM. ▪ E.g when your system needs a lot of applications running in the background i.e multitasking.
+Storage Instances :For applications that are huge in size or have a data set that occupies a lot of space.
+E.g When your application is of huge size.
+GPU Instances :For applications that require some heavy graphics rendering. ▪
+E.g 3D modelling etc.
+Now, every instance type has a set of instances which are optimized for different workloads:
+General Instances :t2,m4, m3
+Compute Instances :c4,c3
+Memory Instances :r3, x1
+Storage Instances :i2,d2
+GPU Instances : g2
+
+56 * difference between nat instance and nat gateway
+NAT instance enable instances in the private subnet to initiate outbound traffic to the Internet but prevent the instances from receiving inbound traffic initiated by someone on the Internet.
+ Note: NAT Instance is a legacy, you can use NAT Gateway
+ NAT Gateway is a managed NAT service that provides better availability, higher bandwidth, and requires less administrative effort.
+
+57 * loadBalancer
+Elastic Load Balancing automatically distributes your incoming traffic across multiple targets, such as EC2 instances, containers, and IP addresses, in one or more Availability Zones.
+It monitors the health of its registered targets, and routes traffic only to the healthy targets. Elastic Load Balancing scales your load balancer as your incoming traffic changes over time.
+It can automatically scale to the vast majority of workloads.
+There are 4 types of load balancers,
+• Application load balancer
+• Network load balancer
+• Classic load balancer
+• Gateway Load balancer
+
+ 58 * aws VPC components : 
+Subnet, Internet Gateway, NAT Gateway, HW VPN Connection, Virtual Private Gateway, Customer Gateway, Router, Peering Connection, VPC Endpoint for S3, Egress-only Internet Gateway.
+ Subnets are like breaking a large network into sub-networks. Maintaining a smaller network is easy as compared to maintaining a large network.
+Route table can be understood as a table that contains rules for routing traffic within and outside a subnet. The route table is also used to add Internet Gateway to the subnet. There can be multiple route tables in a VPC.
+ Internet Gateway allows instance to connect to the internet. It allows the user to make the subnet pubic by providing a route to the internet. With the help of Internet Gateway, an instance can access the internet and the resources outside the instance can access the instance.
+NAT Gateway is a managed NAT service that provides better availability, higher bandwidth, and requires less administrative effort.
+NACL
+Security groups
+Peering :Amazon VPC peering connection is a networking connection between two amazon vpc’s that enables instances in either Amazon VPC to communicate with each other as if they are within the same network. You can create amazon VPC peering connection between your own Amazon VPC’s or Amazon VPC in another AWS account within a single region.
+ 
+VPN: Connects your VPCs Virtual Gateway and your datacenter over the
+Internet
+
+59 * what are the DB you are going to use
+ RDS:RDS is not a database, it’s a service that manages databases, having said that, let’s discuss the databases that RDS can manage as of now:
+ • Amazon aurora
+• Mysql
+• PostgreSQL
+• SQL Server
+• Oracle
+• MariaDB
+ Amazon Dynamo DB is fully managed NoSQL database service that provides fast and predictable performance with seamless scalability. Dynamo DB makes it simple and Cost effective to store and retrieve any amount of data.
+
+60 * about lamda
+AWS Lambda is used to execute backend code without worrying about the underlying architecture, you just upload the code and it runs, it’s that simple!
+AWS Lambda is a compute service offered by Amazon.
+
+61 * difference between network lb and application lb
+Application Load Balancer (as the name implies) works at the Application Layer (Layer 7 of the OSI model, Request level). Network Load Balancer works at Transport layer (Layer 4 of the OSI model, Connection level).
+NLB just forward requests whereas ALB examines the contents of the HTTP request header to determine where to route the request. So, application load balancer is performing content based routing.
+
+ 62 * about Route 53
+ Amazon Route 53 will handle DNS servers. Route 53 give you web interface through which the DNS can be managed using Route 53, it is possible to direct and failover traffic. This can be achieved by using DNS Routing Policy.
+Following are the types of routing policies in route53,
+Simple routing
+Latency routing
+Failover routing
+Geolocation routing
+Weighted routing
+Multivalue answer
+
+63 * about autoscaling
+The Autoscaling feature is used to scale up and down automatically as and when required.
+The application available at AWS requires space and load and the Auto Scaling helps us by providing surety that there is a sufficient number of Amazon EC2 instances available to handle that load.
+ 64 * how to use terraform in AWS
+  65 * how will you restrict inbound traffic when outbound traffic in open
+
+  66 * what is vpc and vpc peering
+VPC stands for Virtual Private Cloud. VPC allows you to easily customize your networking configuration. VPC is a network that is logically isolated from other network in the cloud. It allows you to have your own IP address range, subnets, internet gateways, NAT gateways and security groups.
+VPC peering allows you to connect one VPC to another via a direct
+route using private IP addresses. Use a separate VPC for separate
+functions and interconnect them
+
+  67 * How will an instance present in Oregon can access a S3 bucket present in Sydney without any manual intervention?
+S3 universal bucket . If the bucket public you can access through python or any scripting language
+
+ 68 * (only the ec2 shd b able to access the S3 without any user involved in it,)
+  69 * One ALB with 2 instances A and B and ALB is mapped with 2 website site1 and site2,
+  70 * Can we configure requests which comes to site1 mapped to instance A n site2 to instance B.
+  71 * Can we achieve this behaviour using ALB?
+
+  72 * I have one S3 bucket in which im going to upload 3 files, one with 2TB, 4.9TB and 5.1TB.
+You can upload max 5TB data in one S3 bucket. So here in this we have to choose only one either 2TB or 4.9TB
+
+  73 * So how many files will get uploaded into S3 bucket?
+ There is no limit to the number of objects that you can store in a bucket. You can store all of your objects in a single bucket, or you can organise them across several buckets. However, you can't create a bucket from within another bucket.
+
+  74 * I have 10 ec2 with ALB, each of the instance have 100GB EBS vol. One instance memory utilisation has crossed 80%
+If the instance utilisation is 80%,By enabling auto scaling or by load balancing. (Note : Not sure of the answer )
+
+  75 * and manager asked u to increase the vol to 1TB with zero downtime for all instances, how will u do that?
+In order to extend the volume size, follow these simple steps:
+Login to your AWS console
+Choose “EC2” from the services list
+Click on “Volumes” under ELASTIC BLOCK STORE menu (on the left)
+Choose the volume that you want to resize, right-click on “Modify Volume”
+You’ll see an option window like this one:
+ 
+
+6. Set the new size for your EBS volume (in this case i extended an 8GB volume to 20GB)
+7. Click on modify.
+Now, we need to extend the partition itself.
+SSH to the EC2 instance where the EBS we’ve just extended is attached to.
+Type the following command to list our block devices:
+[ec2-user ~]$ lsblk
+You should be able to see a similar output:
+NAME    MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+xvda    202:0    0  20G  0 disk
+└─xvda1 202:1    0  8G   0 part /
+As you can see size of the root volume reflects the new size, 20GB, the size of the partition reflects the original size, 8 GB, and must be extended before you can extend the file system.
+To do so, type the following command:
+[ec2-user ~]$ sudo growpart /dev/xvda 1
+Be careful, there is a space between device name and partition number!
+Now we can check that the partition reflects the increased volume size (we can check it with the lsblk command we already used):
+NAME    MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+xvda    202:0    0  20G  0 disk
+└─xvda1 202:1    0  20G  0 part /
+Last but not least, we need to extend the filesystem itself.
+If your filesystem is an ext2, ext3, or ext4, type:
+[ec2-user ~]$ sudo resize2fs /dev/xvda1
+If your filesystem is an XFS, then type:
+[ec2-user ~]$ sudo xfs_growfs /dev/xvda1
+Finally we can check our extended filesystem by typing:
+[ec2-user ~]$ df -h
+If everything went right, we should be able to see our effective filesystem extended size:
+Filesystem      Size  Used Avail Use% Mounted on
+devtmpfs        980M     0  980M   0% /dev
+tmpfs           997M     0  997M   0% /dev/shm
+tmpfs           997M  440K  997M   1% /run
+tmpfs           997M     0  997M   0% /sys/fs/cgroup
+/dev/xvda1      20G   1,4G   19G   7% /
+You have just extended your EBS volume size with 0 downtime, enjoy!
+
+ 76 * In RDS, we have parameter group and an option group, what’s the diff?
+Option groups allows the use of available features within a database. So if you spun up a SQL RDS instance, you could configure TDE, Native SQL backup/restore, or mirroring. 
+Parameter groups is how the database is configured. Min/max settings, etc.
+Options groups consist of optional features that can be added to your AWS RDS instance that are not already covered in parameter group
+
+  77 * I have 2 subnets in VPC, how can I know which subnet is public?
+Public subnets have a default route to an Internet Gateway; private subnets do not. check the route table that is associated with that subnet, if the subnet has Internet Gateway will consider it as Public subnet.
+
+  78 * There is a public IP and u have to restrict all type of access for this public Ip, how will u do that?
+Go to VPC services section and find your VPC
+Click on the VPC go into the Details page and find the primary NACL Network Access Control List of the VPC
+Click on the NACL ID hyperlink and go to the NACL Inbound rules tab
+Click on the Edit Inbound Rules button
+On the Edit Inbound Rules page. Click on the Add new rule button
+Give Rule number lower than the All traffic – suppose if you have 3, 4 and 5 rules. Give rule number less than 3. 
+Choose the Type from the drop down. Select All Traffic to block all the traffic from the IP
+Enter the Port Range you would like to block. Choose All for all the ports ( If you have chosen All traffic this is not needed)
+Enter the Source IP CIDR range if single IP add /32 at the end. For ex: public ip is 10.1.0.23, we have to give in source like 10.1.0.23/32
+Select Deny to deny the requests coming from the IP matching the port tange.
+Click on the Sort by rule number 
+Save the changes by clicking on Save Changes
+
+  79 * How does S3 bucket talk to NAT Gateway?
+VPC endpoints for Amazon S3 simplify access to S3 from within a VPC by providing configurable and highly reliable secure connections to S3 that do not require an internet gateway or Network Address Translation (NAT) device. When you create a S3 VPC endpoint, you can attach an endpoint policy to it that controls access to Amazon S3.
+
+  80 * Which AWS service will be best suited for persistent vol for a specific pod in a cluster which wil be catering 10000 requests?
+Elastic Kubernetes Service (Amazon EKS)
+
+  81 * Data should be accessible at all point of time? S3 or EBS or EFS drive
+               S3 – Can be publicly accessible
+
+  83 * Suppose I have multiple accounts and need to create AWS infrastructure? How can I do that
+AWS Organizations provides you with the ability to centrally manage your environment across multiple accounts. You can create and organize accounts in an organization, consolidate costs, and apply policies for custom environments.
+Using AWS Organizations, you can create accounts and allocate resources, group accounts to organize your workflows, apply policies for governance, and simplify billing by using a single payment method for all of your accounts. AWS Organizations is integrated with other AWS services so you can define central configurations, security mechanisms, audit requirements, and resource sharing across accounts in your organization. AWS Organizations is available to all AWS customers at no additional charge
+https://www.youtube.com/watch?v=uOrq8ZUuaAQ
+
+  84 * Which type of instances are using in AWS?
+In interview if they ask which type is used – c5.2xlarge 8 cores of CPU and 16 GiBs of RAM and c5.2xlarge 16 cores of CPU and 32 GiBs of RAM.
+
+  82 * How will you  migrate the app from on-premises to AWS Cloud?
+AWS Application Migration Service (AWS MGN) allows you to quickly realize the benefits of migrating applications to the cloud without changes and with minimal downtime.
+ 
+
+
+85 * There is surge in traffic how you will maintain frontend and backend?
+Amazon EC2 Auto Scaling helps you maintain application availability and allows you to automatically add or remove EC2 instances according to conditions you define. 
+Predictive Scaling predicts future traffic, including regularly-occurring spikes, and provisions the right number of EC2 instances in advance of predicted changes. 
+
+  86 * why we have to use SSL certificate 
+SSL certificate in order to keep user data secure, verify ownership of the website, prevent attackers from creating a fake version of the site, and gain user trust.
+
+  87 * dynamoDB
+Amazon DynamoDB is a fully managed, serverless, key-value NoSQL database designed to run high-performance applications at any scale. 
+ DynamoDB is a great fit for mobile, web, gaming, advertising technology, Internet of Things, and other applications.
+DynamoDB offers built-in security, continuous backups, automated multi-Region replication, in-memory caching, and data export tools.
+DynamoDB is a key-value and document database that can support tables of virtually any size with horizontal scaling. This enables DynamoDB to scale to more than 10 trillion requests per day with peaks greater than 20 million requests per second, over petabytes of storage.
+With DynamoDB, there are no servers to provision, patch, or manage, and no software to install, maintain, or operate. DynamoDB automatically scales tables to adjust for capacity and maintains 
+performance with zero administration. Availability and fault tolerance are built in, eliminating the need to architect your applications for these capabilities.
+
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html
+
+  88 * vpc architecture
+  89 * why we need ELB & how you select which type of load balancer suitable for my application.
+Elastic Load Balancing automatically distributes your incoming traffic across multiple targets, such as EC2 instances, containers, and IP addresses, in one or more Availability Zones.
+Application load balancer in order to handle the http and https requests.
+
+90 * crosszone Loadbalancer
+  With cross-zone load balancing, each load balancer node for your Classic Load Balancer distributes requests evenly across the registered instances in all enabled Availability Zones. ... With the AWS Management Console, the option to enable cross-zone load balancing is selected by default.
+Cross-zone load balancing reduces the need to maintain equivalent numbers of instances in each enabled Availability Zone, and improves your application's ability to handle the loss of one or more instances. 
+However, we still recommend that you maintain approximately equivalent numbers of instances in each enabled Availability Zone for higher fault tolerance.
+
+91 * cloudwatch & cloudtrail
+Cloudwatch:
+Amazon CloudWatch monitors your Amazon Web Services (AWS) resources and the applications you run on AWS in real time
+Cloudtrail :
+Auditing tool records all AWS account activity.
+Any action taken by users, roles and AWS services are recorded to cloud trial.
+
+  92 * Suppose you have your dns in one server example xyz.com and one more asdf.com in another computer server how your server xyz.com knows asdf.com also your how you do that
+  Create CNAME record which Maps hostname to another host name: xyz.com to asdf.com 
+
+93 * Vpc 
+Amazon Virtual Private Cloud (Amazon VPC) lets you provision a logically isolated section of the
+AWS Cloud where you can launch AWS resources in a virtual network that you define like EC2
+instance Databases.
+
+  94 * Public subnet private subnet
+A public subnet has a route to internet
+ A private subnet does not have route to internet. It creates higher level of security
+
+  95 * Cloudtrail
+• Auditing tool records all AWS account activity.
+• Any action taken by users, roles and AWS services are recorded to cloud trial.
+• Cloud trial events are kept for 90 days in event history
+• You can create a trail of your own store the event history in s3 bucket.
+• There are two types of event
+Management events: Management operations performed on AWS
+Data events : currently supported S3 and Lambda: You can now record all API actions on S3
+Objects and receive detailed information such as the AWS account of the caller, IAM user role
+of the caller, time of the API call, IP address of the API, and other details
+Insights events: AWS CloudTrail Insights helps AWS users identify and respond to unusual
+activity associated with write API calls by continuously analyzing CloudTrail management
+
+ 
+ 96 * If we have like 100 servers in that 1-2 server failing how do you find out which one is failing
+Status checks are performed every minute, returning a pass or a fail status. If all checks pass, the overall status of the instance is OK. If one or more checks fail, the overall status is impaired. Status checks are built into Amazon EC2, so they cannot be disabled or deleted.
+When a status check fails, the corresponding CloudWatch metric for status checks is incremented. For more information, see Status check metrics. You can use these metrics to create CloudWatch alarms that are triggered based on the result of the status checks. For example, you can create an alarm to warn you if status checks fail on a specific instance. For more information, see Create and edit status check alarms.
+
+  97 * Best practices for securing your aws
+Safeguard your passwords and access keys
+If you use GitHub for document or code versioning and sharing, consider using git-secrets, which can scan for AWS credentials and other sensitive information. Using git-secrets can help you avoid committing code or documents that contain sensitive information.
+Set up a multi-factor authentication (MFA) device to protect access keys that have only API access. Using MFA can also help fine-tune which API commands require an MFA token to proceed.
+If you suspect that a password or access key pair was exposed:
+Rotate all access key pairs.
+Change your root user password.
+We can do the above methods by IAM service.
+Limit root user access to your resources
+Consider the following strategies to limit root user access to your account:
+Use IAM users for day-to-day access to your account, even if you're the only person accessing it.
+Eliminate the use of root access keys. Instead, rotate them to IAM access keys, and then delete the root access keys.
+Use an MFA device for the root user of your account.
+
+Audit IAM users and their policies frequently
+Frequently audit your IAM users and their permissions, and delete any unused IAM users or keys.
+Set up individual MFA devices for each IAM user who has access to the console.
+Monitor your account and its resources
+Enable AWS CloudTrail logging services to track what credentials are used to initiate particular API calls, as well as when they areused. Doing so can help you to determine if the usage was accidental or unauthorized. You can then take the appropriate steps to mitigate the situation.
+Use CloudTrail and CloudWatch in conjunction to monitor access key usage and receive alerts for unusual API calls.
+Enable resource-level logging (for example, at the instance or OS level).
+Enable Amazon GuardDuty for your AWS account in all supported Regions. After it's enabled, GuardDuty starts to analyze independent streams of data from AWS CloudTrail management and Amazon S3 data events, VPC Flow Logs, and DNS logs to generate security findings. The primary detection categories include account compromise, instance compromise, and malicious intrusions. For more information, see Amazon GuardDuty FAQs.
+
+98 * how do you configure ec2 for high availability 
+create an autoscaling group with min capacity=1 and max capacity=1. So whenever your instance fails, the autoscaling group will create a new one. The autoscaling group comes for free, so this is not a bad solution depending on your SLA.
+use ec2 auto-recovery feature by creating a cloudwatch alarm that would replace your instance if failed.
+create two EC2 instances and use Route 53 DNS failover to resolve to an healthy instance
+Last but not least: the best solution is definitely to create several instances across several availability zones and to use an elastic load balancer to distribute the traffic. This way, even if an instance fails, you already have other ones available. AWS recommends this solution as they have an SLA of 99.95% for their instance in an AZ. By putting in several AZs you can have 100% availability
+
+  99 * what are options aws provide for highly available ec2 if get trouble in one environment 
+If you are running instances on Amazon EC2, Amazon provides several built-in capabilities to achieve high availability:
+Elastic Load Balancing—you can launch several EC2 instances and distribute traffic between them.
+Availability Zones—you can place instances in different AZs.
+Auto Scaling—use auto-scaling to detect when loads increase, and then dynamically add more instances.
+
+  100* what are different configuration used for do autoscalling
+. Step 1: Create a launch template
+In the Amazon EC2 Dashboard, choose "Launch Templates" to create a launch template, specifying a name, AMI, instance type, and other details. Below are some guidelines on setting up your first launch template.
+Choose an Amazon Machine Image (AMI): We recommend the Amazon Linux 2 AMI (free-tier eligible). 
+Choose an instance type: We recommend the t2.micro (free-tier eligible).
+Security group: You have the option to configure your virtual firewall.
+Step 2 : Create an Auto Scaling group
+Using the Auto Scaling wizard, create an Auto Scaling group specifying a name, size, and network for your Auto Scaling group.
+Step 3: Add Elastic Load Balancers (Optional)
+When you set up Auto Scaling with Elastic Load Balancing, you can automatically distribute incoming application traffic across Amazon EC2 instances within your Auto Scaling groups to build highly available, fault-tolerant applications.
+Associate your load balancer with your Auto Scaling group to distribute traffic for your application across a fleet of EC2 instances that can scale with demand.
+You must first create a load balancer.
+Step 4: Configure Scaling Policies (Optional)
+Configure scaling policies for your Amazon EC2 Auto Scaling group.
+126* How can I track the access on my S3 bucket?
+•Use Amazon S3 server access logging to see information about requests to your buckets and objects. You can use Amazon Athena to analyze your server access logs.
+•Use AWS CloudTrail to track API calls to your Amazon S3 resources. You can also use Athena to query your CloudTrail logs.
+  127* For what purpose cloudtrail is used?
+You can use CloudTrail to view, search, download, archive, analyze, and respond to account activity across your AWS infrastructure. You can identify who or what took which action, what resources were acted upon, when the event occurred, and other details to help you analyze and respond to activity in your AWS account.
+128* I have an instance n db connected to this instance is on prem. how can I connect my  application     to on prem database.
+
+  129* How will u connect aws with on prem database?
+AWS Direct Connect is a network service that provides an alternative to using the Internet to utilize AWS cloud services. AWS Direct Connect enables customers to have low latency, secure and private connections to AWS for workloads which require higher speed or lower latency than the internet.
+AWS Direct Connect does not involve the Internet; instead, it uses dedicated, private network connections between your intranet and Amazon VPC. Customers can also implement additional security controls by encrypting the traffic that rides the direct connections using similar protocols like SSL, HTTPs and SSH.
+Q. How can I get started with AWS Direct Connect?
+Use the AWS Direct Connect tab on the AWS Management Console to create a new connection. Then you will change the region to the region you wish to use. When requesting a connection, you will be asked to select the AWS Direct Connect location you wish to use, the number of ports, and the port speed. You will also have the opportunity to request to have an APN Partner contact you if you need assistance extending your office or data center network to the AWS Direct Connect location.
+
+Frequently Asked Questions (amazon.com)
+
+130* nacl & security group
+ 
+ 
+
+  131* nacl will be having inbound & outbound.. is it any configuration have to do manually
+  132* traffic flow from NAT gateway to IGW
+  133* traffic flow how cross NACL, SECURITY GROUP, NAT gateway 
+
+  134* Why NAT gateway why  we cant NAT instance?
+In short, NAT instances are on their way out of regular use. Gateways were specifically designed to replace them and be easier to use. 
+
+  135*  In aws, i have an instance which is critical machine that cant go down and its reaching 100% cpu utilisation.
+It can be done by creating an autoscaling group to deploy more instances when the CPU utilization exceeds 100 percent and distributing traffic among instances by creating a load balancer and registering the Amazon EC2 instances with it.
+
+  136* what are the steps that u r going to take to save this machine from going down?
+  137* where u involved in the production release of ur application? are u deploying any application
+  
+138* what is the deployment strategy that is used in ur company and other stratgies that u know?
+We were using blue green deployment
+Ramped. ...
+Blue/Green. ...
+Canary. ...
+A/B testing. ...
+
+  139* How you will spin up VPC
+  140* How you were using cloudwatch?
+Amazon CloudWatch monitors your Amazon Web Services (AWS) resources and the applications you run on AWS in real time. You can use CloudWatch to collect and track metrics, which are variables you can measure for your resources and applications.
+You can create alarms that watch metrics and send notifications or automatically make changes to the resources you are monitoring when a threshold is breached. For example, you can monitor the CPU usage and disk reads and writes of your Amazon EC2 instances and then use that data to determine whether you should launch additional instances to handle increased load. You can also use this data to stop under-used instances to save money.
+
+  141* Services used in AWS ?
+1.	Amazon EC2 2. Amazon RDS 3. Amazon S3 4. Amazon Lambda 5. Amazon CloudFront 6. Amazon Glacier 7. Amazon SNS 8. Amazon EBS 9. Amazon VPC 10. Amazon Kinesis 11. Amazon Auto-scaling 12. Amazon IAM 13. Amazon SQS 
+
+  142* How can you make any S3 bucket as private ?
+  143* Cross region replication ? how you apply it ? will it copy automatically ?
+
+  144* S3 transfer accereration ?
+Go to the Amazon S3 Console, and click on the bucket name for which you wish to enable the transfer acceleration. Click on the ‘properties’ and choose ‘Transfer acceleration’. ...
+REST API can be used to enable transfer acceleration,
+AWS CLI and AWS SDK can be used to enable transfer acceleration.
+
+What is Amazon Transfer Acceleration - Key features
+It is a service facilitated by Amazed that helps in quick, easy and secure transfer of files between one client and an S3 bucket. The distance between the client and S3 is usually large. Transfer Acceleration leverages Amazon’s CloudFront’s globally distributed edge locations to transfer files quickly. When data arrives to an edge location, it is routed to the Amazon S3 service via an optimized network path. When Transfer acceleration service is used, extra charges are incurred by the user.  
+
+  145* Read replica ?
+The read replica operates as a DB instance that allows only read-only connections. Applications connect to a read replica the same way they do to any DB instance. Amazon RDS replicates all databases in the source DB instance.
+
+  146* Suppose I have 1 master and 2 replicas, master crashes and what will happen to replication ?
+  147* In case there is only one master and fails, application runs or failure ?
+  149* How do you manage credentials ?
+  150* If credentials icon is not available? What you will do?
+151* You are working on EC2 and that goes down and how do you resolve this ?
+  148* Suppose you create Auto scaling group and in launch conf you specify as 3 instances, then the all the 3 instances are running in full capacity ? will the applciation fails or  it will be running ? Do you think AWS will provide new instance ?
+       
+  152* You want to give a access to a EC2 and you have only pvt key and how do you enable him to access the EC2 ?
+
+  153* steps to spin up EC2 instance on linux server
+       To launch an instance
+
+         * Open the Amazon EC2 console at https://console.aws.amazon.com/ec2/.
+         * From the console dashboard, choose Launch Instance.
+         * The Choose an Amazon Machine Image (AMI) page displays a list of basic configurations, called Amazon Machine Images (AMIs), that serve as templates for your instance. Select an HVM version of Amazon Linux 2. Notice that these AMIs are marked "Free tier eligible."
+         * On the Choose an Instance Type page, you can select the hardware configuration of your instance. Select the t2.micro instance type, which is selected by default. The t2.micro instance type is eligible for the free tier. In Regions where t2.micro is unavailable, you can use a t3.micro instance under the free tier. For more information, see AWS Free Tier.
+         * On the Choose an Instance Type page, choose Review and Launch to let the wizard complete the other configuration settings for you.
+         * On the Review Instance Launch page, under Security Groups, you'll see that the wizard created and selected a security group for you. You can use this security group, or alternatively you can select the security group that you created when getting set up using the following steps:
+              Choose Edit security groups.
+              On the Configure Security Group page, ensure that Select an existing security group is selected.
+              Select your security group from the list of existing security groups, and then choose Review and Launch.
+         * On the Review Instance Launch page, choose Launch. 
+         * When prompted for a key pair, select Choose an existing key pair, then select the key pair that you created when getting set up.
+           When you are ready, select the acknowledgement check box, and then choose Launch Instances.
+         * A confirmation page lets you know that your instance is launching. Choose View Instances to close the confirmation page and return to the console.
+         * On the Instances screen, you can view the status of the launch. It takes a short time for an instance to launch. When you launch an instance, its initial state is pending. After the instance starts, its state changes to running and it receives a public DNS name. (If the Public IPv4 DNS column is hidden, choose the settings icon (  ) in the top-right corner, toggle on Public IPv4 DNS, and choose Confirm.
+         * It can take a few minutes for the instance to be ready so that you can connect to it. Check that your instance has passed its status checks; you can view this information in the Status check column.
+
+  154* why Loadbalancer required
+    A load balancer is a device that acts as a reverse proxy and distributes network or application traffic across a number of servers. Load balancers are used to increase capacity (concurrent users) and reliability of applications.
+
+  155* where you are storing your application in cloud
+  156* have you setup master & slave in jenkins? why slave machine required
+157* cloud watch
+       Amazon CloudWatch monitors your Amazon Web Services (AWS) resources and the applications you run on AWS in real time
+
+      Default metrics of EC2 instance: Network usage CPU Usage 
+      Metrics:
+      Metrics are data about the performance of your systems
+      Basic monitoring: which polls for every 5 minutes
+      Detailed monitoring: which polls for every 1 minute.
+      * Alarm: 
+        CloudWatch Alarms feature allows you to watch CloudWatch metrics and to receive notifications when 
+        the metrics fall outside of the levels (high or low thresholds) that you configure 
+        Ex: 
+          If CPU utilization goes beyond the static threshold alarm goes to alarm state 
+        Three states in CW Alarm:
+          i) Alarm state
+         ii) Insufficient 
+        iii) OK state 
+      * Events: An Event indicates change in AWS environment 
+      * Event Resource: Which resource you want to monitor 
+      * Event target: to alert the event change through notifications 
+      * Logs:
+        CloudWatch Logs enables you to centralize the logs from all your systems, applications, and AWS services
+ 
+  158* do you have experience in lambda function & use case of lambda
+  159* when its advicable to use vpc endpoint or IGW
+  160* we have deploy an application in EC2 so i want to block few http ip address
+  161* have experience with docker images. you deployed into AWS?
+  162* tell me  about lambda syncronous and asyncronous using word configuration.
+
+  163* how to create static website in s3?
+ step1: Logon to AWS web console and search for S3 service
+       step2: Click on Create Bucket to configure a new s3 bucket that holds contents for our static website. Give a unique bucket name and choose the appropriate region to deploy your AWS resources.
+       step3: AWS does not allow public access for s3 bucket, by default. We need to edit this behavior for a static website. Click Next, and you see default behavior – Block all public access.
+       step4: Remove the tick from the block all public access. It also gives you a warning message, and you need to acknowledge that you operated intentionally.
+       step5: Review the bucket configuration and click on Create bucket.
+              You can see the newly configured S3 bucket.
+       step6: open the bucket and go to Permissions -> Bucket Policy.
+       step7: It opens the bucket policy editor. We can specify the policy in the JSON format. Paste the following JSON code with your bucket name.
+       step8: You should create a static website in your local system.
+
+ 
+
+ 164* what are the use cases you used in s3
+        * S3 Use Cases
+           * Static Website Hosting
+                You can use S3 as a static website hosting platform. The difference between static and dynamic websites is that dynamic websites receive and process user input. 
+                Static websites are used only for displaying information.
+           * Analytics
+                You can run queries on your S3 data without moving your data to an analytics platform. This makes S3 a great use case for building powerful analytics applications.
+           * File Sharing
+                Amazon S3 can be also used as a cheap file sharing solution. Like I mentioned earlier in the article, the famous file sharing service Dropbox was first built on top of S3.
+
+  165* what are the use case of lambda. how you have used in your company
+AWS Lambda is an event-driven serverless computing platform.
+          This means that it runs code in response to events (“event-driven”), while automatically taking care of all the back-end infrastructure and admin that is needed to run your code (“serverless”).
+
+          AWS Lambda Use Cases
+         * Operating serverless websites
+             This is one of the killer use cases to take advantage of the pricing model of Lambda and S3 hosted static websites.
+         * Rapid document conversion
+             If you are providing documents (for example, specifications, manuals, or transaction records) to your users, they may not always want them in one standard format. 
+         * Predictive page rendering
+             You can use AWS Lambda to do more than just clean up data, however. If you are using predictive page rendering to prepare webpages for display, based on the likelihood that the user will select them, AWS Lambda can play a major supporting role.
+         * Working with external services
+             If your website or application needs to request services from an external provider, there's generally no reason why the code for the site or the main application needs to handle the details of the request and the response 
+         * Log analysis on the fly
+             You can easily build a Lambda function to check log files from Cloudtrail or Cloudwatch.
+         * Automated backups and everyday tasks
+             Creating backups, checking for idle resources, generating reports and other tasks which frequently occur can be implemented in no time using the boto3 Python libraries and hosted in AWS Lambda.
+         * Processing uploaded S3 objects
+             By using S3 object event notifications, you can immediately start processing your files by Lambda, once they land in S3 buckets.
+        
+  166* explain complete setup of VPC how you are configure
+  167* s3 is general, why we have to go for cross region. 
+
+  168* Difference between public subnet and private subnet
+       * Public subnet
+         A public subnet routes 0.0.0.0/0 through an internet gateway (igw). EC2 instances within public subnet could connect to internet through instance public IP. 
+         The instances in the public subnet could send outbound traffic to internet. However, all incoming request to your instance is blocked by your public subnet.
+       * Private subnet
+         The instance within private subnet could not connect to internet. However, the instances could communicate with other instances within the VPC CIDR. 
+         AWS provides an option to allow the instance within private subnet to connect to internet through Network Address Translation (NAT) instance or NAT gateway.
+         The traffic in private subnet is routed through NAT in the public subnet.You could also restrict the route to 0.0.0.0/0 to make it as a private subnet with no internet access in or out from it.
+
+  169* What is ENI
+       ENIs are entirely free to use, though they are not exempt from the standard AWS data charges.
+       * According to AWS, ENIs have the attributes like:
+
+            * A primary private IPv4 address from the IPv4 address range of your VPC
+            * One or more secondary private IPv4 addresses from the IPv4 address range of your VPC
+            * One Elastic IP address (IPv4) per private IPv4 address
+            * One public IPv4 address
+            * One or more IPv6 addresses
+            * One or more security groups
+            * A MAC address
+            * A source/destination check flag
+            * A description
+
+  170* How to connect two vpc
+       Step 1: Set up a peering connection between VPC-1 and VPC-2
+       Step 2: Update the route tables in VPC-1 and VPC-2
+       Step 3: Create a target group
+       Step 4: Create a Network Load Balancer
+       Step 5: Create a VPC endpoint service
+       Step 6: Create a VPC endpoint configuration in Device Farm
+       Step 7: Create a test run
+
+  171* How to upload files to S3 bucket
+          To upload the files to an Amazon S3 bucket
+
+        * Create a bucket in Amazon S3.
+
+           i) Sign in to the AWS Management Console and open the Amazon S3 console at https://console.aws.amazon.com/s3/ ii) Click Create Bucket.
+
+         iii) In the Bucket Name box of the Create a Bucket dialog box, type a bucket name.
+
+          iv) The bucket name you choose must be unique among all existing bucket names in Amazon S3. 
+              One way to help ensure uniqueness is to prefix your bucket names with the name of your organization. Bucket names must comply with certain rules.
+
+           v) Select a Region.
+
+              Create the bucket in the same Region as your cluster. If your cluster is in the US West (Oregon) Region, choose US West (Oregon) Region (us-west-2).
+
+          vi) Choose Create.
+
+              When Amazon S3 successfully creates your bucket, the console displays your empty bucket in the Buckets panel.
+
+         * Create a folder.
+
+           i) Choose the name of the new bucket.
+
+          ii) Choose the Actions button, and click Create Folder in the drop-down list.
+
+         iii) Name the new folder load.
+
+        * Upload the data files to the new Amazon S3 bucket.
+
+           i) Choose the name of the data folder.
+
+          ii) In the Upload - Select Files wizard, choose Add Files.
+
+         iii) Choose Start Upload.
+
+  172* How do you give access to S3 buckets
+       
+       Step 1: Create an instance profile to access an S3 bucket
+               * In the AWS console, go to the IAM service.
+               * Click the Roles tab in the sidebar.
+               * Click Create role.
+                    * Under Select type of trusted entity, select AWS service.
+                    * Under Choose the service that will use this role, select EC2.
+                    * Click Next: Permissions, Next: Tags, and Next: Review.
+                    * In the Role name field, type a role name.
+                    * Click Create role. The list of roles displays.
+               * In the role list, click the role.
+               * Add an inline policy to the role. This policy grants access to the S3 bucket.
+                    * In the Permissions tab, click Add Inline policy.
+                    * Click the JSON tab.
+                    * Copy this policy and set <s3-bucket-name> to the name of your bucket.
+                    * Click Review policy.
+                    * In the Name field, type a policy name.
+                    * Click Create policy.
+               * In the role summary, copy the Instance Profile ARN.
+      Step 2: Create a bucket policy for the target S3 bucket
+              * Paste in a policy. A sample cross-account bucket IAM policy could be the following, replacing <aws-account-id-databricks> with the AWS account ID where the Databricks environment is deployed, 
+               <iam-role-for-s3-access> with the role you created in Step 1, and <s3-bucket-name> with the bucket name.
+              * Click Save.
+      Step 3: Note the IAM role used to create the Databricks deployment
+              * This IAM role is the role you used when you set up the Databricks account.
+              * If you are on an E2 account:
+                  * As the account owner or an acount admin, log in to the account console.
+                  * Go to Workspaces and click your workspace name.
+                  * In the Credentials box, note the role name at the end of the Role ARN.
+      Step 4: Add the S3 IAM role to the EC2 policy
+              * In the AWS console, go to the IAM service.
+              * Click the Roles tab in the sidebar.
+              * Click the role you noted in Step 3.
+              * On the Permissions tab, click the policy.
+              * Click Edit Policy.
+              * Modify the policy to allow Databricks to pass the IAM role you created in Step 1 to the EC2 instances for the Spark clusters. Here is an example of what the new policy should look like.
+                Replace <iam-role-for-s3-access> with the role you created in
+              * Click Review policy.
+              * Click Save changes.
+
+  173* Different kinds of load balancer
+      
+         types of Load balancers
+       * Application load balancers
+       * Network load balancers
+       * Classic load balancers
+       * Gateway load balancers
+
+       * Application load balancers
+         An Application Load Balancer makes routing decisions at the application layer (HTTP/HTTPS), supports path-based routing, and can route requests to one or more ports on each container instance in your cluster.
+         Application Load Balancers support dynamic host port mapping. 
+
+       * Network load balancers
+         A Network Load Balancer makes routing decisions at the transport layer (TCP/SSL). It can handle millions of requests per second. After the load balancer receives a connection, it selects a target from the target group for the default rule using a flow hash routing algorithm. It attempts to open a TCP connection to the selected target on the port specified in the listener configuration.
+         It forwards the request without modifying the headers. Network Load Balancers support dynamic host port mapping.
+
+       * Classic load balancers
+         A Classic Load Balancer makes routing decisions at either the transport layer (TCP/SSL) or the application layer (HTTP/HTTPS). Classic Load Balancers currently require a fixed relationship between the load balancer port and the container instance port.
+
+       * Gateway load balancers
+         Gateway Load Balancers allow you to deploy, scale, and manage virtual appliances, such as firewalls, intrusion detection and prevention systems, and deep packet inspection systems. It combines a transparent network gateway (that is, a single entry and exit point for all traffic) and distributes traffic while scaling your virtual appliances with the demand. A Gateway Load Balancer operates at the third layer of the Open Systems Interconnection (OSI) model, the network layer. 
+         It listens for all IP packets across all ports and forwards traffic to the target group that's specified in the listener rule.
+       
+  174* Difference between alb n nlb
+        AWS recommends using Application Load Balancer for Layer 7 and Network Load Balancer for Layer 4 when using VPC.
+       Only ALB & NLB supports Load Balancing to multiple ports on the same instance.
+
+       ALB(Application load balancer)
+   
+       * With ALB, it is a requirement that you enable at least two or more Availability Zones.
+       * operates at the request level (layer 7), routing traffic to targets – EC2 instances, containers, IP addresses, and Lambda functions based on the content of the request.
+       * It is ideal for advanced load balancing of HTTP and HTTPS traffic, and provides advanced request routing targeted at delivery of modern application architectures, 
+         including microservices and container-based applications. 
+
+       NLB(Network load balancer)
+
+       * With NLB, Elastic Load Balancing creates a network interface for each Availability Zone that you enable.
+       * operates at the connection level (Layer 4), routing connections to targets – EC2 instances, microservices, and containers – within VPC based on IP protocol data.
+       * It is ideal for load balancing of both TCP and UDP traffic, is capable of handling millions of requests per second while maintaining ultra-low latencies.
+
+  175* Difference between TCP and UDP
+
+                              TCP	                                                                         UDP
+
+      * It is a connection-oriented protocol.	                                                       * It is a connectionless protocol.
+      * TCP reads data as streams of bytes, and the message is transmitted to segment boundaries.      * UDP messages contain packets that were sent one by one. It also checks for integrity at the arrival time.
+      * TCP rearranges data packets in the specific order.	                                       * UDP protocol has no fixed order because all packets are independent of each other.
+      * The speed for TCP is slower.	                                                               * UDP is faster as error recovery is not attempted.
+      * Header size is 20 bytes                                  				       * Header size is 8 bytes.
+      * TCP is heavy-weight. TCP needs three packets to set up a socket connection before              * UDP is lightweight. There are no tracking connections, ordering of messages, etc.
+        any user data can be sent.	
+      * TCP does error checking and also makes error recovery.	                                       * UDP performs error checking, but it discards erroneous packets.
+      * Acknowledgment segments	                                                                       * No Acknowledgment segments
+      * Using handshake protocol like SYN, SYN-ACK, ACK	                                               * No handshake (so connectionless protocol)
+      * TCP is reliable as it guarantees delivery of data to the destination router.	               * The delivery of data to the destination can’t be guaranteed in UDP.
+      * TCP offers extensive error checking mechanisms because it provides flow control and            * UDP has just a single error checking mechanism which is used for checksums.
+        acknowledgment of data.
+
+176* terraform for AWS lambda?
+177* S3 encryption?
+Amazon S3 uses AES-256 bit encryption to encrypt the data with the customer provided key and removes the key from its memory post completion of the encryption process whereas, in the decryption process, it first verifies and matches if the same key is provided.
+
+178* how other team member access S3?
+Sign in to the AWS Management Console and open the Amazon S3 console at https://console.aws.amazon.com/s3/ . Use your AWS account credentials, not the credentials of an IAM user, to sign in to the console. Edit the inline policy that you created in the previous step. In the navigation pane on the left, choose Users.
+
+179* how u have used IAM?
+An IAM user is a resource in IAM that has associated credentials and permissions. An IAM user can represent a person or an application that uses its credentials to make AWS requests. This is typically referred to as a service account.
+
+180* how encryption takes place in S3 for the team user operating on S3.
+S3 encrypts the object with plaintext data key and deletes the key from memory. The encrypted object along with the encrypted data key is then stored in S3. While retrieving the object S3 sends the encrypted data key to KMS
+.
+181* cloudwatch vs cloudtrail?
+Amazon Cloudwatch is a monitoring service that gives you visibility into the performance and health of your AWS resources and applications, whereas AWS Cloudtrail is a service that logs AWS account activity and API usage for risk auditing, compliance and monitoring.
+
+182* Cost analysis for AWS services.
+Sign into the AWS Management Console and open the Billing console at https://console.aws.amazon.com/billing/ . Choose Bills to see details about your current charges. Choose Payments to see your historical payment transactions. Choose AWS Cost and Usage Reports to see reports that break down your costs.
+
+183* Which are the AWS services that you have used?
+Amazon Elastic Compute Cloud    ........   Amazon elastic file system
+Amazon S3       ,.......................................Amazon simple notification service
+ Amazon RDS,.......,...................................Route53
+AWS Lambda,..........................Amazon simple queue service
+Amazon DynamoDB.............. Amazon cloud  watch
+ AWS Elastic Beanstalk............... Amazon cloud trail
+Amazon Virtual Private Cloud
+Amazon elastic block storage
+184* What are the limitaions of SNS services?
+Both subscribe and unsubscribe transactions are limited to 100 transactions per second (per AWS account). The Publish API, the core API for publishing SNS messages, will be throttled at the following levels: 30,000 calls/second in the us-east-1 region.
+
+185* How you monitor unhealthy instance using cloud watch?
+Configure CloudWatch to send an Amazon SNS alert when the status of a health check is unhealthy. Note that several minutes might elapse between the time that a health check fails and the time that you receive the associated SNS notification.
+
+186* NAT gateway?
+A NAT gateway is a Network Address Translation (NAT) service. You can use a NAT gateway so that instances in a private subnet can connect to services outside your VPC but external services cannot initiate a connection with those instances.
+
+187* Router?
+A router is a networking device that forwards data packets between computer networks. Routers perform the traffic directing functions on the Internet.
+
+188* subnetmask? which one has more ip values 24 or 25?
+A subnet mask is used to divide an IP address into two parts.
+"24" is the more ip values.
+
+189* How to configure autoscaling not to happen too rapidly?
+190* AWS- vpc , ebs and s3 diff.
+Both S3 and EBS gives the availability of 99.99%, but the only difference that occurs is that S3 is accessed via the internet using API's and EBS is accessed by the single instance attached to EBS.
+
+191* Lamda function how u used in project.
+You can invoke your Lambda functions using the Lambda API, or Lambda can run your functions in response to events from other AWS services. For example, you can use Lambda to: Build data-processing triggers for AWS services such as Amazon Simple Storage Service (Amazon S3) and Amazon DynamoDB.
+
+192* Ec2 trouble shooting if u r not able to login.
+193* EKS?
+Amazon Elastic Kubernetes Service (Amazon EKS) is a managed Kubernetes service that makes it easy for you to run Kubernetes on AWS and on-premises.
+194* Which region ur applications are hosted - tell atleast two regions.
+1.Mumbai  2. N. Virginia
+195* Which region kubernetes cluster set up?
+
+196* CDN in AWS- cloud front?
+A Content Delivery Network (CDN) is a critical component of nearly any modern web application. It used to be that CDN merely improved the delivery of content by replicating commonly requested files.
+
+197* In real time examples for cloud front?
+198* Have you deployed any application to S3 bucket.
+Noo
+199* What kind of data stored in s3 bucket- dynamic or static?
+Both.
+200* Types of servers used : app and web server Configuration details for jboss server?
+There are many types of servers, including web servers, mail servers, and virtual servers.
+Don't know the the configuration for jboss servers.
+
+
+  201* ALB 
+ Application load balancer allows developer to configure & route incoming traffic to application  based in the AWS public cloud.
+Operated at request level.
+Used mainly for web application running with HTTP & HTTPS protocol.
+	
+  202* Target groups and autoscaling groups and difference betn them.
+A target group tells a load balancer where to direct traffic to : EC2 instances, Container or AWS Lambda functions, amongst others. When creating a load balancer, you create one or more listeners and configure listener rules to direct the traffic to one target group.
+
+Autoscaling Group: Autoscaling Group(ASG) is basically a group of identical instances. New instances can be launched in this group for scaling up purpose, based on certain scaling policies. Similarly, existing instances can be terminated based on scaling policies set by the user..
+
+  203* Diff betn subnet and security group 
+  204* AWS fargate 
+AWS fargate is serverless, pay-as-you-go compute engine that lets you focus on building  application without maintaining server.
+
+  205* Single thread in AWS lambda
+	DON’T NO
+
+  206* what is SNS used for?
+Amazon Simple Notification Service is a notification service provided as part of Amazon Web Service.
+It provides a low-cost infrastructure for the mass delivery of messages, predominantly to mobile users.
+SNS topic is a logical access point that acts as a communication channel.
+
+  207* Can we check disk space n usage from cloud watch ?
+	We can create cloud watch alarm to monitor the disk utilization metric.
+
+  208* In general section ec2, they have separate section on CPU credits, what are CPU credits on ec2?
+A CPU Credit provides the performance of a full CPU core for one minute.” So the instance is constantly “fed” CPU Credits, and consumes them when the CPU is active. If the rate of consumption is less than the rate of feeding, the CPUCreditBalance (a metric visible in CloudWatch) will increase.
+
+209* There are 2 major classification of ec2s, that is shared and dedicated. What is the diff between   them?
+
+  210* VPC peering
+A VPC peering connection is a networking connection between two VPCs that enables you to route traffic between them using private IPv4 addresses or IPv6 addresses.
+Instances in either VPC can communicate with each other as if they are within the same network.
+You can create a VPC peering connection between your own VPCs, or with a VPC in another AWS account.
+The VPCs can be in different regions (also known as an inter-region VPC peering connection).
+
+  211* VPC endpoints.
+A VPC endpoint enables connections between a virtual private cloud (VPC) and supported services, without requiring that you use an internet gateway, NAT device, VPN connection, or AWS Direct Connect connection. 
+
+  212* How you monitor complete e commerce website.
+            Don’t No. 
+
+  213* How you provide authentication and authorization for users using your e commerce website.
+	Authentication and Authorization - both are highly critical for eCommerce portals. Authentication identifies a particular users for their genuinity and authorization gives access to that user into the eCommerce portal and this access should have the provision for a proper and thorough control.
+The Authentication can be done through a unique email Id for each user, a strong non-guessable password policy and setting account lock out mechanisms to discourage an unauthorized user from guessing passwords.
+The Authorization can be controlled by giving the super admin the privilege to grant permissions for other users and controlling and preventing the unauthorized users by way of URL and any other means.
+
+  214* What are the services you used in AWS
+Amazon EC2 ( Elastic Compute Cloud ).
+Amazon S3 ( Simple Storage Service ).
+Amazon RDS ( Relational Database Service ).
+Amazon Lambda.
+Amazon Cloud Front.
+Amazon glacier.
+Amazon SNS ( Simple notification service ).
+Amazon EBS ( Elastic Block Service).
+Amazon VPC ( virtual Private cloud).
+Amazon Auto Scaling.
+Amazon IAM ( Identity Access management ).
+Amazon Simple Queue service.
+Amazon Cloud Watch.
+
+  215* How monitoring using Prometheus and Grafana works.
+	The combination of OSS grafana and Prometheus is becoming a more and more common monitoring stack used by DevOps teams for storing and visualizing time series data. Prometheus acts as the storage backend and open source grafana as the interface for analysis and visualization.
+Prometheus collects metrics from monitored targets by scraping metrics from HTTP endpoints on these targets. But what about monitoring Prometheus itself?
+Like any server running processes on a host machine, there are specific metrics that need to be monitored such as used memory and storage as well as general ones reporting on the status of the service.
+Conveniently, Prometheus exposes a wide variety of metrics that can be easily monitored. By adding open source grafana as a visualization layer, we can easily set up a monitoring stack for our monitoring stack
+
+  216* How you will give access using Iam to a user who wants to access only Jenkins master
+  217* how do u configure CloudFront
+
+Go to the AWS Console
+2. Create an Amazon S3 bucket
+3. Create an Amazon CloudFront distribution
+4. Specify your distribution settings
+5. Configure your origin
+6. Configure Origin Access Identity
+7. Configure default cache behavior
+8. Configure your TTLs
+9. Configure additional features
+10. Test your CloudFront distribution
+
+  218* You are building a solution for a customer to extend their on-premises data center to AWS.
+	Open the Amazon CloudFront console 
+From the console dashboard, click Create Distribution.
+Click Get Started in the Web section.
+ 
+Specify the following settings for the distribution:
+In the Origin Domain Name field Select the S3 bucket you created previously.
+In Restrict Bucket Access click the Yes radio then click Create a New Identity.
+Click the Yes, Update Bucket Policy Button.
+ 
+Scroll down to the Distribution Settings section, in the Default Root Object field enter index.html
+Click Create Distribution.
+To return to the main CloudFront page click Distributions from the left navigation menu.
+After CloudFront creates your distribution which may take approximately 10 minutes, the value of the Status column for your distribution will change from In Progress to Deployed.
+ 
+When your distribution is deployed, confirm that you can access your content using your new CloudFront Domain Name which you can see in the console. Copy the Domain Name into a web browser to test.
+ 
+You now have content in a private S3 bucket, that only CloudFront has secure access to CloudFront then serves the requests, effectively becoming a secure, reliable static hosting service with additional features available such as custom certificates and alternate domain names
+
+  219* The customer requires a 50-Mbps dedicated and private connection to their VPC. Which
+	AWS Direct Connect
+
+  220* AWS product or feature satisfies this requirement?
+  221* Which DNS name can only be resolved within Amazon EC2?
+	The private DNS Name can only be resolved within the VPC where it exists. This is because the IP address only makes sense within that private network.
+
+  222* What does Amazon CloudFormation provide?
+AWS CloudFormation is a service that gives developers and businesses an easy way to create a collection of related AWS and third-party resources, and provision and manage them in an orderly and predictable fashion.
+
+  223* difference between the CloudFormation and terraform
+	CloudFormation uses either JSON or YAML.
+Terraform uses Hashicorp’s proprietary language called HCL (Hashicorp Configuration Language
+
+While CloudFormation is confined to the services offered by AWS.
+Terraform spans across multiple Cloud Service Providers like AWS, Azure, Google Cloud Platform.
+
+Terraform, is an open-source solution that enables the development of infrastructure-as-a-code. It is a powerful tool that helps the employees work in IT operations, provision, upgrade, and maintain infrastructure.
+Amazon CloudFormation is a fantastic tool that gives the development and operations team the liberty to automate AWS’s infrastructure provision easily.
+
+Terraform is a free and open-source tool. 
+CloudFormation has no price. The only fee that users incur is the cost of AWS service provisioned by CloudFormation.
+
+
+224* have you deployed in different regions ? how many availability zone ur using for application? why    exactly those azs only.
+
+  225* distastive recovery in aws ?
+Disaster recovery strategies available to you within AWS can be broadly categorized into four approaches, ranging from the low cost and low complexity of making backups to more complex strategies using multiple active Regions.
+
+  226* how to protect the aws through disaster.
+AWS Backup supports copying backups across Regions, such as to a disaster recovery Region. As an additional disaster recovery strategy for your Amazon S3 data, enable S3 object versioning.
+
+  227* if you have different AWS account how you will do the deployment? multi region deployment?
+Step 1: Create an S3 bucket in either account
+Step 2: Grant Amazon S3 bucket permissions to the production account's IAM instance profile
+Step 3: Create resources and a cross-account role in the production account
+Step 4: Upload the application revision to Amazon S3 bucket
+Step 5: Assume the cross-account role and deploy applications
+
+  228* how using route 53 route the traffic to different regions
+Route 53 is not just a DNS service, it also provides mechanisms to route traffic to multiple regions based on latency or geolocation. Such mechanisms are known as routing policies. When it comes to multi-region routing, we need to have a way to route traffic to different regions based on latency, as well as smooth rollout and rollback procedures when launching the multi-region project.
+To that end, we require two routing policies - weighted policy and latency policy.
+The weighted routing policy allows us to decide which weights to assign for single-region and multi-region traffic. For example, we would like to test the multi-region infrastructure by assigning 10% of traffic to latency routing, and 90% of traffic to the usual endpoint in a single region. 
+Latency routing policy – Use when you have resources in multiple AWS Regions and you want to route traffic to the Region that provides the best latency with less round-trip time
+
+  229* how your created VPC, how many type of subnets u have in company? 
+	Yes, I created 2 public Subnet & 2 Private Subnet.
+  230* how will access the database from the public subnet
+  231* what are the NACL rules u have allowed for your application?
+	1. Inbound means – incoming (Ingress) 
+2. Outbound means – outgoing (egress)
+ 3. Always explicit deny take precedence over allow.
+
+  232* what are the ports you have used for accessing data base for your application?
+ MariaDB – 3306
+Microsoft SQL Server – 1433
+MySQL – 3306
+Oracle – 1521
+PostgreSQL – 5432
+
+  233* how access the database like MYSQL, how you will define the port for database? how you will do that?
+Install a SQL client that you can use to connect to the DB instance.
+You can connect to a MySQL DB instance by using tools like the mysql command line utility.
+Make sure that your DB instance is associated with a security group that provides access to it. 
+-Open the RDS console and then choose Databases to display a list of your DB instances.
+-Choose the MySQL DB instance name to display its details.
+-On the Connectivity & security tab, copy the endpoint. Also, note the port number. You   need both the endpoint and the port number to connect to the DB instance.
+Connect to the a database on a MySQL DB instance. For example, enter the following command at a command prompt on a client computer to connect to a database on a MySQL DB instance using the MySQL client. Substitute the DNS name for your DB instance for <endpoint>. In addition, substitute the master user name that you used for <mymasteruser>, and provide the master password that you used when prompted for a password.
+PROMPT> mysql -h <endpoint> -P 3306 -u <mymasteruser> -p
+
+  234* where will you define the port?
+
+  235* how you will protect your system so that no one can access the system?
+- Create a strong password for your AWS resources
+-Use a group email alias with your AWS account
+-Enable multi-factor authentication
+-Set up AWS IAM users, groups, and roles for daily account access
+-Delete your account’s access keys
+-Enable CloudTrail in all AWS regions
+
+  236* how do you check how much memory is consumed once you configure the autoscaling ? where will be logs stored
+ Use aws service Cloudwatch to check memory consumed in autoscaling.
+ CloudTrail stores the information in log files in the Amazon S3 bucket that you specify. You can use these log files to monitor activity of your Auto Scaling groups. Logs include which requests were made, the source IP addresses where the requests came from, who made the request, when the request was made, and so on.
+
+  237* how ur access the api gateway ? difference between load balancer and api gateway
+
+  238* how do we pass the credentials for api gateway? how do we pass for web browser?
+
+  For  API gateway
+1) If you have AWS credentials on the machine with your client, you could use basic SDK (e.g. API C# SDK JavaScript SDK)
+2) If you want to use the API Gateway, you can use Lambda Authorizer. Credentials must be obtained from somewhere (e.g. AWS Cognito).
+3) One option is to use API keys. Generate key for your client installations and include it with your API calls. 
+	
+For web browser 
+Using Amazon Cognito Identity to authenticate users and supply credentials
+Using web federated identity
+Hard coded in the script
+
+  239* how do you check the cloud watch logs through ec2 instance ? how do you check ?
+
+Open the CloudWatch console .
+On the left side menu, choose Log groups under Logs. On that screen, enter securitylablogs in the search bar. Click on the log group that appears in the results.
+You will see these log streams: cw-agent-logs, apache-access-logs, apache-error-logs, yum-logs, and ssh-logs. Click through all of them to view the logs from each of these services.
+You should see a record of log events. This is the data being collected on your EC2 instance, and then sent to CloudWatch by the CloudWatch Agent installed on the instance.
+
+  240* how to check the logs of application in ec2? 
+In the left navigation pane, choose Instances, and select the instance.
+Go to Actions > Instance Settings > Get System Log
+
+  241* if the logs size reaches the maximum capacity how ur going to manage, snapshot and ami are not the solution how you do it
+you can increase the maximum size of the Security event log and set retention method for this log to “Overwrite events as needed”. 
+
+To adjust your Security event log size and retention method  :
+Open the Group Policy Management console on any domain controller in the target domain: navigate to Start → Windows Administrative Tools (Windows Server 2016 and higher) or Administrative Tools (Windows 2012) → Group Policy Management.
+In the left pane, navigate to Forest: <forest_name> → Domains → <domain_name> → Domain Controllers. Right-click the effective domain controllers policy (by default, it is the Default Domain Controllers Policy), and select Edit from the pop-up menu.
+Navigate to Computer Configuration → Policies → Windows Settings → Security Settings → Event Log and double-click the Maximum security log size policy.
+ 
+In the Maximum security log size Properties dialog, select Define this policy setting and set maximum security log size to"4194240" kilobytes (4GB).
+Select the Retention method for security log policy. In the Retention method for security log Properties dialog, check Define this policy and select Overwrite events as needed.
+Navigate to Start → Run and type "cmd". Input the gpupdate /force command and press Enter. The group policy will be updated.
+
+
+
+  
+  242* how do you mount the EBS volume permanently.
+Step 1: Head over to EC2 –> Volumes and create a new volume of your preferred size and type.
+Step2: Attach the volume to EC2 Instance.
+Step3: Now, login to your ec2 instance and list the available disks using the following command.  lsblk
+Step4: Check any data in volume and format the same.
+sudo mkfs -t xfs /dev/xvdf   or   sudo mkfs -t ext4 /dev/xvdf
+Step5:  Create a directory of your choice to mount our new ext4 volume
+	Sudo mkdir /mydisk
+Step6:  Mount the volume to “mydisk” directory using the following command.
+	Sudo mount /dev/xvdf /mydisk/
+
+  243* AWS CloudFront.
+Amazon CloudFront is a fast content delivery network (CDN) service that securely delivers data, videos, applications, and APIs to customers globally with low latency, high transfer speeds, all within a developer-friendly environment.
+  244* diff between EKS and ECS
+  245* s3 storage classes and diff between standard and glacier storage class
+Standard.
+Reduced redundancy Storage.
+Infrequent Access.
+Glacier.
+Standard: Most expensive Storage Class, designed for general- & all-purpose storage.
+99.99 % object availability
+
+Glacier: Cheapest S3 storage Class, Designed for long term archival Storage, May take several hours to retrieve the data.
+
+  246* types of ELB
+Application Load balancer.
+Network load Balancer.
+Classic Load Balancer.
+Gateway Load balancer.
+
+  247* how will check when you are unable connect to ec2 instance from your local system
+
