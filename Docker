@@ -84,3 +84,55 @@ Custom Docker Image / Dockerfile
 			  uncompresses it to the destination.
 			- If the source is a link to a downloadable file it will download 
 			  to the destination.		
+CMD and ENTRYPOINT
+		shell format 
+			CMD "ls -lrt"
+			ENTRYPOINT "ls -lrt"
+			
+		EXEC Format
+			CMD ["ls","-l","-rt"]
+			ENTRYPOINT ["ls","-lrt"]
+			
+		- Both CMD and ENTRYPOINT are used to define the execution command of the container which will be created 
+		  from this image.
+		- If we use multiple CMD or ENTRYPOINT in the same Dockerfile only the latest one will be considered 
+		  and all the other CMD or ENTRYPOINT will be ignored.	
+		- If we use both CMD and ENTRYPOINT in the same Dockerfile, ENTRYPOINT will get the 
+		  higest priority and the command of CMD will become as argumetns to ENTRYPOINT	
+		  
+		 Difference  
+		  -	CMD command can be overridden at the runtime.	
+		  - ENTRYPOINT can't be overridden at the runtime but the runtime command
+		    will become parameters to ENTRYPOINT command.
+		  
+		Note: Q. Can we override ENTRYPOINT 
+				 Yes, after docker 1.6 version docker has given option to over
+					  Entrypoint command at the runtime using --entrypoint 	
+					  
+	ENV 
+		- This instruction is used to set the environment variable inside the container.
+		
+		ENV <variable_name> <value>
+		ENV <variable_name>=<value>
+		
+		multiple 
+		ENV <variable_name>=<value> <variable_name>=<value> <variable_name>=<value> ....
+		
+		To create environment variables at run time 
+			- using -e or --env option at the runtime we can create env variables 
+			- For multiple variables use multiple -e 
+
+		ex:	docker run .... -e <variable_name>=<value> -e <variable_name>=<value> ....	
+		
+		The best way to load multiple env variable is using env file 
+			using --env-file <file_path> at the runtime (with docker run command) we can 
+			load the env file containing n number variables.	
+			
+	ARG
+		Using ARG we can pass parameters to Dockerfile as user inputs 
+			
+		ARG <var_name>=<default_value>
+
+		
+		To pass the value at build time 
+			docker build --build-arg <var_name>=<value> ....
