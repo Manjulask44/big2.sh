@@ -59,6 +59,8 @@ Docker containers
 
 	To run a command inside a conatainer 
 		docker exec -it <container_id> <command>
+		     or
+		docker ecec -it <container_id> /bin/bash
 
 	To login / get inside a containre 
 		docker attach <container_id>
