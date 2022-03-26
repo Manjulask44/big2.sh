@@ -134,7 +134,20 @@ CMD and ENTRYPOINT
 		Using ARG we can pass parameters to Dockerfile as user inputs 
 			
 		ARG <var_name>=<default_value>
-
-		
+        EX:
+	  sudo vi docker file 
+	  From ubuntu
+	  ARG input
+	  ENV ARG_ENV=$input
+	  ENTRYPIONT ["bash"]
+	  	
 		To pass the value at build time 
 			docker build --build-arg <var_name>=<value> ....
+			
+ Output:     docker build -t my_ubuntu --build-arg input="this is my input" .
+             docker run -it --rm my_ubuntu my_ubuntu
+            rrot #container ~/# env   --- enter
+	  ---- ENV ARG_ENV=this is my input
+	    
+	    
+ 
