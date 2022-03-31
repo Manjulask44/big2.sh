@@ -1,7 +1,7 @@
 Kubernetes Installation
 	Minimum system requirement for master nod is 2-core cpu and 4GB RAM
 	
-	1. sudp apt update 
+	1. sudo apt update 
 	2. sudo apt-get install -y apt-transport-https
 	3. sudo su -
 	4. curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add
