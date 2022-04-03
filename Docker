@@ -244,10 +244,17 @@ Assignment: How to save the content of container to a image.
 		uts - namespace for unix timesharing system which isolates kernel and version identifiers,
 			  time bonding of process.
 		ipc - (interprocess communication) namespace for managing the process communication.	  
-		mnt - namespace for managing filesystem mounts.
+		mnt - namespace for managing filesystem mounts. df -h
 		net - namespace for managing network interfaces.
 		
 Docker networking 
+
+        EXPOSE 
+		- used to expose a port to the docker network 
+		- All conatainers in the same newtwork will have access to exposed port.
+		
+		EXPOSE <prot_number>
+		
 	Publish 
 		PUBLISH = Expose + outside world port mapping 
 			
