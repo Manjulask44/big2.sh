@@ -189,8 +189,8 @@ spec:
     containers:
        - name: my-nginx 
          image: nginx:latest
-		 ports: 
-		    - containerPort: 80
+	 ports: 
+	    - containerPort: 80
 	
 TO create / apply a configuration 
 	kubectl apply -f <file>.yml	
