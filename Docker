@@ -244,7 +244,7 @@ Assignment: How to save the content of container to a image.
 		uts - namespace for unix timesharing system which isolates kernel and version identifiers,
 			  time bonding of process.
 		ipc - (interprocess communication) namespace for managing the process communication.	  
-		mnt - namespace for managing filesystem mounts. df -h
+		mnt - namespace for managing filesystem mounts. command df -h
 		net - namespace for managing network interfaces.
 		
 Docker networking 
@@ -263,6 +263,7 @@ Docker networking
 	
 	- To publish a port 
 		docker run -p <host_port>:<container_port> .....
+	       Ex:- docker run -it -d --rm -p 8081:80 --name my_ngnix ngnix 
 		
 	-P publish_all
 		It binds all the exposed ports of the container to host machine port
@@ -279,7 +280,9 @@ Docker networking
 			-p 8080-8085:8086-8091
 			 - The total number of host ports in range should be same as the 
 			   total number of container ports range.	
-			   
+--command lsof -i :8081	
+used to check the this port is open port or not 
+
 Docker network types 
 	1. Bridge 
 		- This is a private internal network created by docker on the host machine 
