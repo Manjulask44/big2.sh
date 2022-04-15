@@ -112,7 +112,7 @@ kubernetes Architecture
 			  server for pod related changes running in its worker node.
 			- kubelet always make sure that the assigend pods to its worker node is running.
 			- kubelet is the one which communicates with containarisation tool (docker daemon)
-              through docker API (CRI). 	
+                              through docker API (CRI). 	
 			- work of kubelet is to create and run the pods. Always reports the status of the worker node 
 			  and each pod to API server. (uses a tool call cAdvisor)
 			- Kubelet is the one which runs probes.	
@@ -886,7 +886,8 @@ Assigment: create livenessProbe and readinessprobe with tcp, http, exec
 RBAC 	
 	How user access is maintained in k8s ?
 	
-	Role-Based access control
+	Role-Based access control 
+	  types
 		- accounts 
 		- Roles 
 		- Binding of roles 
@@ -941,7 +942,7 @@ RBAC
 		- Roles are always user defined to any type of account.
 		- Roles works at namespace level.
 		
-		comman fiels in roles 
+		comman fields in roles 
 			apiGroups: List the api groups to control the access to a account.
 			Subject: Users, service_account or Groups
 			Resources: K8S objects on which we want to define this role 
