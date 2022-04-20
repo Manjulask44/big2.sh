@@ -112,7 +112,7 @@ kubernetes Architecture
 			  server for pod related changes running in its worker node.
 			- kubelet always make sure that the assigend pods to its worker node is running.
 			- kubelet is the one which communicates with containarisation tool (docker daemon)
-                              through docker API (CRI). 	
+              through docker API (CRI). 	
 			- work of kubelet is to create and run the pods. Always reports the status of the worker node 
 			  and each pod to API server. (uses a tool call cAdvisor)
 			- Kubelet is the one which runs probes.	
@@ -886,8 +886,7 @@ Assigment: create livenessProbe and readinessprobe with tcp, http, exec
 RBAC 	
 	How user access is maintained in k8s ?
 	
-	Role-Based access control 
-	  types
+	Role-Based access control
 		- accounts 
 		- Roles 
 		- Binding of roles 
@@ -942,7 +941,7 @@ RBAC
 		- Roles are always user defined to any type of account.
 		- Roles works at namespace level.
 		
-		comman fields in roles 
+		comman fiels in roles 
 			apiGroups: List the api groups to control the access to a account.
 			Subject: Users, service_account or Groups
 			Resources: K8S objects on which we want to define this role 
@@ -1006,7 +1005,7 @@ RBAC
 			 name: my-sa # the name of account need to attached to role 
 			 namespace: default 	
 	
-	TO check the roles affect 
+	To check the roles affect 
 		kubectl auth can-i list svc --as=system:serviceaccount:<namespace>:<service_account> -n <namepsace>
 		
 		ex: kubectl auth can-i list svc --as=system:serviceaccount:default:my-sa -n default
@@ -1019,23 +1018,258 @@ RBAC
 		roleRef:
 		   apiGroup: rbac.authorization.k8s.io
 		   kind: ClusterRole
-		   name: pod-reader # the name of role we want to attach the account.
+		   name: <cluster_role_name> # the name of cluster role we want to attach the account.
 		subjects: 
            - kind: ServiceAccount
 			 name: my-sa # the name of account need to attached to role 
 			 namespace: default 	
 
+helm
+
+How to create/schedule a pod to a particualr work node? 
+How not to create a pod on a node ?
+
+node selector
+	- Node selector is a way of binding pods to a particular worker node based on labels given 
+	  to that node.
+	- Logical expresions type of selection cannot be achived in node selector.
+	
+	To label a node 
+		kubectl label node <node_name> <key>=<value>
+	
+Node Afinity and anti-afinity (Inter-pod affinity)
+	- Node selector with logical expresions is Affinity 
+	- Using node afinity we can spread pods accross worker nodes based on 
+	  CPU and RAM capacity (memory-intense mode), Availabilty zones (HA mode).
+	
+	- requiredDuringSchedulingIgnoredDuringExecution 
+		The scheduler can't schedule the Pod unless the rule is met.	
+	- preferredDuringSchedulingIgnoredDuringExecution 
+		The scheduler tries to find a node that meets the rule. If a matching node is not available, 
+		the scheduler still schedules the Pod in normal way.
+    - IgnoredDuringExecution 
+		if the node labels change after Kubernetes schedules the Pod, the Pod continues to run.	
+
+		
+	spec: 
+			containers: 
+			affinity: 
+			   podAntiAfinity: 
+	              preferredDuringSchedulingIgnoredDuringExecution: 
+				     labelSelector:
+					    - matchExpressions: 
+							 - key: env
+                               operator: in 
+                               values: 
+                                  - test
+                                  - prod								  
+
+									 
+Anti-Afinity (Inter-pod affinity)
+	- This is used to define whether a given pod should or should not be scheduled on a particular node 
+      based on labels.
+	  
+		spec: 
+			containers:
+			  ....
+			ifNotPresent: 
+                nodeSelector: 
+					env: test
+					
+		spec: 
+			containers: 
+				...
+			affinity: 
+				podAntiAfinity: 
+                 	requiredDuringSchedulingIgnoredDuringExecution:
+						- labelSelector:
+                            - matchExpressions: 
+                                - key: env 
+                                  operator: in 
+                                  values: 
+                                     - test 
+                                     - qa				
+
+Taints and Tolerations
+	- Taints are used to repel the pods from a specific worker node.
+    - We can apply taint ti worker nodes which tells scheduler to repel all pods expcet the pods 
+	  with toleration defind in it for the taint.
+	- only the pos with toleration define in it for the taint of worker node. 
+       
+	- 2 operators we can use Equal and Exists (If we use Exists, no value required)   
+	- Bellow are the effects we can use,
+		1) NoSchedule - This taint means unless a pod with toleration k8s won't be able 
+           to schedule a pod to tainted node.		
+		2) NoExecute - To delete all the pods except some required pods we can use this. 
+		
+		To taint a worker node 
+			kubectl taint nodes <node_name> <taint_key>=<taint_value>:<taint_effect>
+			
+		To remove the taint (use - at the end)
+			kubectl taint nodes <node_name> <taint_key>=<taint_value>:<taint_effect>-
+			
+		To add tolerations
+				(single toleration with Equal)
+			spec: 
+				tolerations: 
+					- key: "key1"    
+					  operator: "Equal"
+					  value: "value1"
+					  effect: "NoSchedule"
+			
+				(single toleration with Exists)
+			spec: 
+				tolerations: 
+					- key: "key1"    
+					  operator: "Exists"
+					  effect: "NoSchedule"
+					  
+				(multiple tolerations)
+			spec: 
+				tolerations: 
+					- key: "key1"    
+					  operator: "Equal"
+					  value: "value1"
+					  effect: "NoSchedule"
+					- key: "key2"    
+					  operator: "Equal"
+					  value: "value2"
+					  effect: "NoExecute"	
+					  
+configMap and secrets 
+	- Configmap are k8s object that allows us to separate the configuration data/files from the 
+	  image content of the pod.
+	- Using this we can keep the configurations of application portable and same configuration
+	  can be used in multiple pods.
+	- configmaps are used for non-confidential data.	
+		
+	Create a configmap 
+		1. Create a file by name "app.properties" 
+				environment=test
+				database_url="192.168.10.9"
+		2. Create configmaps 
+			a. load the single config file 
+				kubectl create configmap <configmap_name> --from-file configs/app.properties
+		
+			b. load the multiple config file
+				kubectl create configmap <configmap_name> --from-file configs/
+				
+		3. using configmaps in pod 
+			spec: 
+				containers: 
+				   - name: nginx 
+				     image: nginx 
+					 env: 
+					    - name: CURRENT_NAME
+						  valueFrom: 
+							  configMapKeyRef: 
+									name: <configmap_name>
+									key: environment
+
+Secrets 
+	- secrets are used for confidential data.
+	- k8s by default uses base-64 encoding method to encrypt the data.
+	
+	type 
+		Opaque - for user related data in base64 
+		service account token - kubernetes.io/service-account-token 
+		docker cofig - kubernetes.io/dockercfg 
+		
+			
+	1. get the encoded values 
+		echo "production" | base64	
+			output: cHJvZHVjdGlvbgo=
+	2. use the above encoded value in secret 
+		apiVersion: v1
+		kind: Secret
+		metadata:
+			name: my-secret
+		type: Opaque
+		data:
+			environment: cHJvZHVjdGlvbgo=
+	
+	3. using secrets in pod 
+			spec: 
+				containers: 
+				   - name: nginx 
+				     image: nginx 
+					 env: 
+					    - name: CURRENT_NAME
+						  valueFrom: 
+							  secretKeyRef: 
+									name: <secret_name>
+									key: environment	
+
+resource limits and quotas
+	How to limit the number of pod to a namespace ?
+	How to limit the memory to a pods ? 	
+
+	Count quota 
+		- we use k8s quotas to precisely specify the number of objects a user can work with.
+		- we can define quotas for the below objects 
+			count/persistentvolumeclaims
+			count/services
+			count/secrets
+			count/configmaps
+			count/replicationcontrollers
+			count/deployments.apps
+			count/replicasets.apps
+			count/statefulsets.apps
+			count/jobs.batch
+			count/cronjobs.batch
+			
+		Applying the resource quota for an object (count quota)
+			apiVersion: v1 
+			kind: ResourceQuota 
+			metadata: 
+			    name: count-quota 
+			spec: 
+				hard: 
+					pods: "2"
+					   or 
+					count/pods: "2"  
+					
+		Applying quotas for CPU, RAM, DISK SPACE
+			apiVersion: v1 
+			kind: ResourceQuota 
+			metadata: 
+			    name: ram-quota 
+			spec: 
+				hard: 
+					request.memory: "500Mi" 
+					limits.memory: "800Mi"
+
+	Limitations 
+		CPU 
+			- 1 cpu, in k8s is equal to 1 core/cpu 100%.
+			ex:  0.1 cpu - 10 % of 1 cpu - 1 gup - 1 hyperthread - 1 Nueral 
+		
+		Memory 
+			- It will be in terms of bytes 
+			- It should fixed numebrs always 
+			syntax: Ei, Pi, Ti, Gi, Mi, Ki
+			
+		using quotas in pod 
+			spec: 
+				containers: 
+				   - name: nginx 
+				     image: nginx 
+					 resources:
+					    requests: 
+						   memory: "500Mi"
+						   cpu: 0.5
+						limits:
+                           memory: "1Gi"
+                           cpu: 1		
+	
+	Note: In terms of cpu k8s doesnot go behind the limits (it never throttles).
+		  but in terms of memory (RAM) k8s allows the pods to go behind the limit of RAM	
+	
+ingress
+
+network policy
 cronjob and Jobs 
 
-resource limits and quots
-network policy
-
-helm 
- 
-ingress 
-
-node selector , affinity , taint 
-configMap and secrets 
 deployment stratergies 
 
 docker multistage build 
