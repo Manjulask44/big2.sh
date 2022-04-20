@@ -18,17 +18,17 @@ Kubernetes Installation
 		(Make sure docker is running)
 		12. sudo su -
 		13. kubeadm init
-			ERROR1: if we get kubelet isn't running or healthy
-						kubelet doesnt got access to docker engine which means 
-						we need to configure cgroup of docker 
-					create a file /etc/docker/daemon.json with below content
-						{
-							"exec-opts": ["native.cgroupdriver=systemd"]
-						}
-					Reload docker daemon
-						systemctl daemon-reload
-						systemctl restart docker
-						systemctl restart kubelet
+		  ERROR1: if we get kubelet isn't running or healthy
+			kubelet doesnt got access to docker engine which means 
+			we need to configure cgroup of docker 
+			create a file /etc/docker/daemon.json with below content
+		{
+	        	"exec-opts": ["native.cgroupdriver=systemd"]
+		}
+			Reload docker daemon
+			systemctl daemon-reload
+			systemctl restart docker
+			systemctl restart kubelet
 					
 			Run kubeadm init again	
 			
