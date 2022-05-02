@@ -1,0 +1,415 @@
+What is ansible?
+Ansible is simple, open-source, configuration management tool used for IT 
+automation engine for cloud infrastructure, in-house servers.	
+
+Ansible push based configuration management system/tool
+   1. ansible dones not require any dedicated agent running on the target host manchines.
+   2. minimun ansible requirement is host machines with pyhton installed on it.
+   3. we only require a proper ssh connection between the controller and the host machines.
+   
+Advantages:
+	1. free/open source
+	2. Very simple to steup up
+	3. Agent less CM tool
+	
+
+--------------------------------------------------------------------------------------------------------------------------------------
+Difference between Terraform and Ansible Provisioning
+Let’s see how Terraform vs. Ansible battle differentiates from each other:
+
+                       Terraform                                                                                                   	Ansible
+1) Terraform is a provisioning tool.	                                                            |    Ansible is a configuration management tool.
+2) It is the best fit for orchestrating cloud services and setup cloud infrastructure from scratch. |	 It is mainly used for configuring servers with the right software and updates already configured resources.
+3) Terraform does not support bare metal provisioning by default.	                            |    Ansible supports the provisioning of bare metal servers.
+4) It does not provide better support in terms of packaging and templating.                         | 	 It provides full support for packaging and templating.
+
+--------------------------------------------------------------------------------------------------------------------------------------
+Ansible Inventory 
+	 Static Inventory
+		- It is file which contains the ip and configuration of connection to target host machines 
+		  on which we want execute our playbooks
+		- we can group the hosts in inventory.
+		- default location of host file is /etc/ansible/hosts
+		- each line except group name is considered as a single host connection configuration.
+		[frontend]
+		13.233.104.27 ansible_user=ubuntu ansible_become_user=root
+		15.206.185.128 ansible_user=ubuntu ansible_become_user=root
+
+		[backend]
+		15.206.185.128 ansible_user=ubuntu ansible_become_user=root
+                - To pass custom inventory file "ansible -m ping -i <inventoryfile>"
+		
+	 Dynamic Inventory	
+			- Is basically a script which will gives the inventory output.
+			- we can use python, perl, bash 
+                        - script provided by ansible https://github.com/ansible/ansible/blob/stable-2.9/contrib/inventory/ec2.py  Using AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY and command like "ansible-playbook -i ec2.py myplaybook.yml"
+
+To install ansible (Ubuntu)
+
+1. Establish a passwordless connection
+ssh-keygen -t rsa (optional)
+
+use ssh-copy-id username@remote_host (optional) or manually paste
+
+sudo apt update
+
+sudo apt install ansible
+
+
+To setup inventory file
+
+$ sudo nano /etc/ansible/hosts
+
+
+To check ansible inventory
+ansible-inventory --list -y
+
+
+To test connection to host
+
+ansible all -m ping 
+
+ansible all -m ping -i <inventory-name>
+
+		
+Ansible playbook 
+------------------------------------------------
+	playbook
+		- can contain n numner of play 
+				- each play is designated to run n number task 
+							- each task is designated to execute a module (only one module per task)
+-------------------------------------------------
+
+Some Example Playbooks
+
+#Ansible playbook to install nginx on RHEL distribution
+
+
+tasks:
+ -name:create a directory nginx
+  file:
+    path: /ubuntu/home/nginx
+    state: directory
+
+ -name: Installing nginx
+  yum:
+    name:nginx
+    state:latest
+
+ -name: start nginx
+  service
+    name:nginx
+    state:start
+
+
+
+#Ansible playbook to install tomcat on ubuntu
+
+tasks:
+ -name: installing tomcat
+  apt:
+   name: tomcat
+   state: latest
+ -name: start tomcat
+  systemctl:
+    name:tomcat
+    state:start
+
+ -name: status of tomcat running or not
+  systemctl:
+    name:tomcat
+    state:status
+
+
+#Ansible playbook to install tomcat on server using groupname from inventory
+
+ -name:play_1
+  hosts: frontend
+  tasks:
+   -name: install tomcat
+    apt:
+     name: tomcat
+     state: latest
+   -name: start tomcat
+    systemctl:
+     name:tomcat
+     state:start 
+
+
+ - name: Play_1
+   hosts: backend
+   tasks:
+     - name: Install git (backend)
+       become: true
+       apt:
+         name: git
+         state: present
+         update_cache: yes
+     - name: Install jq (backend)
+       become: true
+       apt:
+         name: jq
+         state: latest
+         update_cache: yes		
+		 
+Installing multiple items with single task 
+
+---
+ - name: Demo
+   hosts: frontend
+   tasks:
+     - name: Install git (frontend)
+       become: true
+       apt:
+         name: "{{ item }}"
+         state: present
+         update_cache: yes
+       with_items:
+           - git
+           - nginx
+           - memcached
+           - jq
+           - curl
+           - wget	
+
+
+
+Assignment: 
+
+1. Create static inventory and ping the remote hosts from Ansible
+2. Create dynamic inventory by executing python code and ping.
+
+link to  python code - https://github.com/ansible/ansible/blob/stable-2.9/contrib/inventory/ec2.py
+
+
+Ansible common modules
+
+System- User,Group,Hostname,service,Mount, Ping
+Command- Command,Expect, Shell, script
+Files- Archive, File, Find, replace,Copy
+Databse- Mongo, mysql, postgress
+Cloud- AWS
+
+Some example modules-
+
+setup- ansible test-servers -m setup -u ec2-user
+
+copy - ansible test-servers -m copy -a 'src=/home/knoldus/Personal/blogs/blog3.txt dest=/tmp' -u ec2-user
+
+
+
+
+
+
+Asible facts
+	- Asible facts are the variable which contains the details of target hosts
+	- all the facts are prefixed with ansible_ word
+    - setup module is used to gather all facts (ansible all -m setup)	
+	
+Install package on both ubuntu and redhat by refering the facts
+---
+ - name: Play_1
+   hosts: all
+   tasks:
+     - name: Install git (frontend)
+       become: true
+       apt:
+          name: "{{ item }}"
+          state: present
+          update_cache: yes
+       when: 
+	      - ansible_distribution == "Ubuntu"
+		  - ansible_pkg_mgr == "apt"
+       with_items:
+           - git
+           - nginx
+           - memcached
+           - jq
+           - curl
+           - wget
+     - name: Install git (frontend)
+       become: true
+       yum:
+          name: "{{ item }}"
+          state: present
+          update_cache: yes
+       when: ansible_distribution == "RedHat"
+       with_items:
+           - git
+           - nginx
+           - memcached
+           - jq
+           - curl
+           - wget	
+	
+Ansible run a task only if previous is success 
+	- using register we can able to achive this condition 
+	- register will save the output in a variable in JSON format only if the task executes
+	  successfuly 
+	- we can register the output of task which we want check the status and on another task 
+      we can check register variable got values or not 
+---
+ - name: Play_1
+   hosts: all
+   tasks:
+     - name: Install multiple packages on Ubuntu
+       become: true
+       apt:
+          name: "{{ item }}"
+          state: present
+          update_cache: yes
+       when:
+         - ansible_pkg_mgr == "apt"
+         - ansible_distribution == "Ubuntu"
+       with_items:
+           - git
+           - nginx
+           - memcached
+           - jq
+           - curl
+           - wget
+       register: result
+
+     - name: Print debug message
+       debug:
+          var: result
+          verbosity: 0
+	   when: result is changed 	  
+	  
+Ansible debug 
+	- print output of a task with register varibale 
+	---
+ - name: Play_1
+   hosts: all
+   tasks:
+     - name: Install multiple packages on Ubuntu
+       become: true
+       apt:
+          name: "{{ item }}"
+          state: present
+          update_cache: yes
+       when:
+         - ansible_pkg_mgr == "apt"
+         - ansible_distribution == "Ubuntu"
+       with_items:
+           - git
+           - nginx
+           - memcached
+           - jq
+           - curl
+           - wget
+       register: result
+
+     - name: Print debug message
+       debug:
+          var: result
+          verbosity: 0
+		  
+Ansible Run specific tasks / plays 
+	 - Using tags we can run specific task or play in a playbook
+  Example:	 
+---
+
+ - name: Play_1
+   hosts: all
+   tasks:
+     - name: Install git on Ubuntu
+       become: yes
+       apt:
+         name: git
+         state: present
+         update_cache: yes
+       tags:
+         - ubuntu_pkg
+     - name: Install curl
+       become: yes
+       apt:
+         name: curl
+         state: present
+         update_cache: yes
+       tags:
+         - curl_pkg
+
+ansible-playbook playbook.yaml --tags="ubuntu_pkg"
+ansible-playbook playbook.yaml --skip-tags="ubuntu_p
+
+      
+	 To run only task with the tag
+		ansible-playbook playbook.yaml --tags="tag_name1,tag_name2"
+		ansible-playbook playbook.yaml --tags="ubuntu_pkg"
+	
+
+         To skip a tagged play / task 
+		ansible-playbook playbook.yaml --skip-tags="tag_name1,tag_name2"
+		ansible-playbook playbook.yaml --skip-tags="ubuntu_pkg"
+				
+Ansible Roles
+	- Roles are better way of organizing my playbooks
+	- Instead of defining everything play, handlers, templates etc. in a single file 
+	  we can define it in a proper folder structure using roles 
+	- default location od roles is /etc/ansible/role (if directory is not present create it)  
+	- ansible-galaxy is the tool which ansible gives us to create a role 
+            ansible-galaxy init <role_name>
+        - Download the roles from ansible galaxy 
+           ansible-galaxy install <role_name>	
+	- Role directory structure
+		roles
+			└── install_pkg
+				├── README.md
+				├── defaults
+				│   └── main.yml
+				├── files
+				├── handlers
+				│   └── main.yml
+				├── meta
+				│   └── main.yml
+				├── tasks
+				│   └── main.yml
+				├── templates
+				├── tests
+				│   ├── inventory
+				│   └── test.yml
+				└── vars
+					└── main.yml
+
+	tasks - Conatins the main list of task that we want to execute by the role.
+			main.yml is where we put our tasks 
+	handlers - Contains tasks which are executed only if it is notified by other task after successful execution (if there is change from the notifing task).
+        defaults - It contains default variables for the role and it is the least precedence varible in ansible.
+	vars  - The variables which will be used by role. These variable can be defined in our playbook also. (task/play variables)
+	files - Contains static file that can be coppied to hosts by role 
+			In task I don't need use the complete path just filename is used to copy.
+	templates - used to define dynamic value in files and copy it to host with values defined.
+				this uses jinja2 format templating.
+	meta - To define role dependencies.			
+     			
+Ansible Vault
+
+ ansible-vault create vault.yml
+
+ ansible-vault  encrypt inventory.txt
+
+ ansible-vault view vault.yml
+ 
+ ansible-vault edit vault.yml
+
+ ansible-vault decrypt vault.yml
+
+
+Ansible variables
+---
+- hosts: all
+  vars:
+    hello: world
+  tasks:
+  - name: Ansible Basic Variable Example
+    debug:
+      msg: "{{ hello }}"
+
+ansible-playbook <file> --extra-var hello=123
+
+Assignment:
+1. write a single playbook which install java, git, wget on ubuntu machine and curl, python, tomcat on redhat machine.
+2. Write a playbook which accepts command line arguments and print it to the console
+3. create a vault and store the password. Demonstrate all relevant commands.
+4. Create a role.
