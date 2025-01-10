@@ -17,11 +17,12 @@ Advantages:
 Difference between Terraform and Ansible Provisioning
 Let’s see how Terraform vs. Ansible battle differentiates from each other:
 
-                       Terraform                                                                                                   	Ansible
-1) Terraform is a provisioning tool.	                                                            |    Ansible is a configuration management tool.
-2) It is the best fit for orchestrating cloud services and setup cloud infrastructure from scratch. |	 It is mainly used for configuring servers with the right software and updates already configured resources.
-3) Terraform does not support bare metal provisioning by default.	                            |    Ansible supports the provisioning of bare metal servers.
-4) It does not provide better support in terms of packaging and templating.                         | 	 It provides full support for packaging and templating.
+                       Terraform                                                                                       Ansible
+1) Terraform is a provisioning tool.	                                                        |    Ansible is a configuration management tool.
+2) It is the best fit for orchestrating cloud services                                          |    It is mainly used for configuring servers with the 
+    and setup cloud infrastructure from scratch.                                                   right software and updates already configured resources.                                              
+3) Terraform does not support bare metal provisioning by default.	                        |    Ansible supports the provisioning of bare metal servers.
+4) It does not provide better support in terms of packaging and templating.                     |    It provides full support for packaging and templating.
 
 --------------------------------------------------------------------------------------------------------------------------------------
 Ansible Inventory 
@@ -42,7 +43,8 @@ Ansible Inventory
 	 Dynamic Inventory	
 			- Is basically a script which will gives the inventory output.
 			- we can use python, perl, bash 
-                        - script provided by ansible https://github.com/ansible/ansible/blob/stable-2.9/contrib/inventory/ec2.py  Using AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY and command like "ansible-playbook -i ec2.py myplaybook.yml"
+                        - script provided by ansible https://github.com/ansible/ansible/blob/stable-2.9/contrib/inventory/ec2.py 
+                            Using AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY and command like "ansible-playbook -i ec2.py myplaybook.yml"
 
 To install ansible (Ubuntu)
 
@@ -374,7 +376,7 @@ Ansible Roles
 
 	tasks - Conatins the main list of task that we want to execute by the role.
 			main.yml is where we put our tasks 
-	handlers - Contains tasks which are executed only if it is notified by other task after successful execution (if there is change from the notifing task).
+handlers - Contains tasks which are executed only if it is notified by other task after successful execution (if there is change from the notifing task).
         defaults - It contains default variables for the role and it is the least precedence varible in ansible.
 	vars  - The variables which will be used by role. These variable can be defined in our playbook also. (task/play variables)
 	files - Contains static file that can be coppied to hosts by role 
